@@ -22,6 +22,7 @@ namespace TnsNamesEditor.Forms
         private CancellationTokenSource? pingCancellation;
         private readonly Dictionary<string, string> statusCache = new(StringComparer.OrdinalIgnoreCase);
         private readonly HashSet<string> pendingStatusRefresh = new(StringComparer.OrdinalIgnoreCase);
+        private string currentStatusFilter = "Todos";
 
         public MainForm()
         {
@@ -31,6 +32,9 @@ namespace TnsNamesEditor.Forms
             dataGridView1.SelectionChanged += DataGridView1_SelectionChanged;
             dataGridView1.CellFormatting += DataGridView1_CellFormatting;
             dataGridView1.RowPrePaint += DataGridView1_RowPrePaint;
+            radioTodos.CheckedChanged += StatusFilter_CheckedChanged;
+            radioOnline.CheckedChanged += StatusFilter_CheckedChanged;
+            radioOffline.CheckedChanged += StatusFilter_CheckedChanged;
             LoadIcon();
             UpdateFilePathLabel(string.Empty);
             UpdateAvailableActions();
@@ -270,8 +274,8 @@ namespace TnsNamesEditor.Forms
             if (dataGridView1.Columns["ConnectionStatus"] != null)
             {
                 var statusColumn = dataGridView1.Columns["ConnectionStatus"];
-                statusColumn.HeaderText = "Status";
-                statusColumn.SortMode = DataGridViewColumnSortMode.NotSortable;
+                statusColumn.HeaderText = "Status ⇅";
+                statusColumn.SortMode = DataGridViewColumnSortMode.Programmatic;
                 statusColumn.ReadOnly = true;
                 statusColumn.AutoSizeMode = DataGridViewAutoSizeColumnMode.AllCells;
             }
@@ -771,16 +775,16 @@ namespace TnsNamesEditor.Forms
             if (string.IsNullOrEmpty(searchText))
             {
                 filteredEntries.Clear();
-                RefreshGrid();
+                ApplyStatusFilter();
                 if (updateStatus)
                 {
-                    UpdateStatus($"{entries.Count} entrada(s) carregada(s)");
+                    UpdateStatus($"{GetVisibleEntries().Count} entrada(s) carregada(s)");
                 }
                 UpdateAvailableActions();
                 return;
             }
 
-            filteredEntries = entries.Where(entry =>
+            var searchResults = entries.Where(entry =>
                 entry.Name.ToLower().Contains(searchText) ||
                 entry.Host.ToLower().Contains(searchText) ||
                 entry.Port.ToLower().Contains(searchText) ||
@@ -790,6 +794,7 @@ namespace TnsNamesEditor.Forms
                 (entry.Server?.ToLower().Contains(searchText) ?? false)
             ).OrderBy(e => e.Name).ToList();
 
+            filteredEntries = ApplyStatusFilterToList(searchResults);
             RefreshGrid();
             
             if (!updateStatus)
@@ -808,6 +813,50 @@ namespace TnsNamesEditor.Forms
             }
 
             UpdateAvailableActions();
+        }
+
+        private void StatusFilter_CheckedChanged(object? sender, EventArgs e)
+        {
+            if (sender is RadioButton rb && rb.Checked)
+            {
+                currentStatusFilter = rb.Text;
+                ApplyStatusFilter();
+            }
+        }
+
+        private void ApplyStatusFilter()
+        {
+            if (!string.IsNullOrWhiteSpace(txtSearch.Text))
+            {
+                PerformSearch(updateStatus: false);
+            }
+            else
+            {
+                filteredEntries = ApplyStatusFilterToList(entries);
+                RefreshGrid();
+                UpdateAvailableActions();
+            }
+        }
+
+        private List<TnsEntry> ApplyStatusFilterToList(List<TnsEntry> source)
+        {
+            if (currentStatusFilter == "Online")
+            {
+                return source.Where(e => e.ConnectionStatus == "Online").ToList();
+            }
+            else if (currentStatusFilter == "Offline")
+            {
+                return source.Where(e => e.ConnectionStatus == "Offline").ToList();
+            }
+            else
+            {
+                return source.ToList();
+            }
+        }
+
+        private List<TnsEntry> GetVisibleEntries()
+        {
+            return filteredEntries.Any() ? filteredEntries : ApplyStatusFilterToList(entries);
         }
 
         private void lblFilePath_Click(object sender, EventArgs e)
@@ -1008,6 +1057,11 @@ namespace TnsNamesEditor.Forms
                     sorted = direction == ListSortDirection.Ascending 
                         ? list.OrderBy(e => e.Server ?? string.Empty) 
                         : list.OrderByDescending(e => e.Server ?? string.Empty);
+                    break;
+                case "ConnectionStatus":
+                    sorted = direction == ListSortDirection.Ascending 
+                        ? list.OrderBy(e => e.ConnectionStatus ?? string.Empty) 
+                        : list.OrderByDescending(e => e.ConnectionStatus ?? string.Empty);
                     break;
                 default:
                     sorted = direction == ListSortDirection.Ascending 

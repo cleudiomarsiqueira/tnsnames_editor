@@ -43,6 +43,10 @@ namespace TnsNamesEditor.Forms
             btnEdit = new ToolStripButton();
             searchPanel = new Panel();
             txtSearch = new TextBox();
+            filterPanel = new Panel();
+            radioTodos = new RadioButton();
+            radioOnline = new RadioButton();
+            radioOffline = new RadioButton();
             statusStrip1 = new StatusStrip();
             lblStatus = new ToolStripStatusLabel();
             lblFilePath = new ToolStripStatusLabel();
@@ -52,6 +56,7 @@ namespace TnsNamesEditor.Forms
             contextMenuStrip1.SuspendLayout();
             toolStrip1.SuspendLayout();
             searchPanel.SuspendLayout();
+            filterPanel.SuspendLayout();
             statusStrip1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)dataGridView1).BeginInit();
             SuspendLayout();
@@ -186,6 +191,51 @@ namespace TnsNamesEditor.Forms
             txtSearch.TextChanged += txtSearch_TextChanged;
             txtSearch.KeyDown += txtSearch_KeyDown;
             // 
+            // filterPanel
+            // 
+            filterPanel.BackColor = SystemColors.Control;
+            filterPanel.Controls.Add(radioTodos);
+            filterPanel.Controls.Add(radioOnline);
+            filterPanel.Controls.Add(radioOffline);
+            filterPanel.Dock = DockStyle.Top;
+            filterPanel.Location = new Point(0, 84);
+            filterPanel.Name = "filterPanel";
+            filterPanel.Padding = new Padding(9, 4, 9, 4);
+            filterPanel.Size = new Size(1050, 30);
+            filterPanel.TabIndex = 3;
+            // 
+            // radioTodos
+            // 
+            radioTodos.AutoSize = true;
+            radioTodos.Checked = true;
+            radioTodos.Location = new Point(12, 6);
+            radioTodos.Name = "radioTodos";
+            radioTodos.Size = new Size(57, 19);
+            radioTodos.TabIndex = 0;
+            radioTodos.TabStop = true;
+            radioTodos.Text = "Todos";
+            radioTodos.UseVisualStyleBackColor = true;
+            // 
+            // radioOnline
+            // 
+            radioOnline.AutoSize = true;
+            radioOnline.Location = new Point(80, 6);
+            radioOnline.Name = "radioOnline";
+            radioOnline.Size = new Size(60, 19);
+            radioOnline.TabIndex = 1;
+            radioOnline.Text = "Online";
+            radioOnline.UseVisualStyleBackColor = true;
+            // 
+            // radioOffline
+            // 
+            radioOffline.AutoSize = true;
+            radioOffline.Location = new Point(155, 6);
+            radioOffline.Name = "radioOffline";
+            radioOffline.Size = new Size(61, 19);
+            radioOffline.TabIndex = 2;
+            radioOffline.Text = "Offline";
+            radioOffline.UseVisualStyleBackColor = true;
+            // 
             // statusStrip1
             // 
             statusStrip1.ImageScalingSize = new Size(20, 20);
@@ -219,13 +269,13 @@ namespace TnsNamesEditor.Forms
             dataGridView1.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             dataGridView1.ContextMenuStrip = contextMenuStrip1;
             dataGridView1.Dock = DockStyle.Fill;
-            dataGridView1.Location = new Point(0, 84);
+            dataGridView1.Location = new Point(0, 114);
             dataGridView1.Margin = new Padding(3, 2, 3, 2);
             dataGridView1.Name = "dataGridView1";
             dataGridView1.ReadOnly = true;
             dataGridView1.RowHeadersWidth = 51;
             dataGridView1.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
-            dataGridView1.Size = new Size(1050, 419);
+            dataGridView1.Size = new Size(1050, 389);
             dataGridView1.TabIndex = 2;
             dataGridView1.CellDoubleClick += dataGridView1_CellDoubleClick;
             dataGridView1.ColumnHeaderMouseClick += dataGridView1_ColumnHeaderMouseClick;
@@ -243,6 +293,7 @@ namespace TnsNamesEditor.Forms
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(1050, 525);
             Controls.Add(dataGridView1);
+            Controls.Add(filterPanel);
             Controls.Add(searchPanel);
             Controls.Add(statusStrip1);
             Controls.Add(toolStrip1);
@@ -259,6 +310,8 @@ namespace TnsNamesEditor.Forms
             toolStrip1.PerformLayout();
             searchPanel.ResumeLayout(false);
             searchPanel.PerformLayout();
+            filterPanel.ResumeLayout(false);
+            filterPanel.PerformLayout();
             statusStrip1.ResumeLayout(false);
             statusStrip1.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)dataGridView1).EndInit();
@@ -278,6 +331,10 @@ namespace TnsNamesEditor.Forms
         private ToolStripButton btnCheckAll;
         private Panel searchPanel;
         private TextBox txtSearch;
+        private Panel filterPanel;
+        private RadioButton radioTodos;
+        private RadioButton radioOnline;
+        private RadioButton radioOffline;
         private StatusStrip statusStrip1;
         private ToolStripStatusLabel lblStatus;
         private DataGridView dataGridView1;
