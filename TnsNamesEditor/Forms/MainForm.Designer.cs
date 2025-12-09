@@ -35,7 +35,6 @@ namespace TnsNamesEditor.Forms
             menuCopy = new ToolStripMenuItem();
             toolStrip1 = new ToolStrip();
             btnOpen = new ToolStripButton();
-            btnSave = new ToolStripButton();
             toolStripSeparator1 = new ToolStripSeparator();
             btnAdd = new ToolStripButton();
             btnDelete = new ToolStripButton();
@@ -88,7 +87,7 @@ namespace TnsNamesEditor.Forms
             toolStrip1.AutoSize = false;
             toolStrip1.GripStyle = ToolStripGripStyle.Hidden;
             toolStrip1.ImageScalingSize = new Size(32, 32);
-            toolStrip1.Items.AddRange(new ToolStripItem[] { btnOpen, btnSave, toolStripSeparator1, btnAdd, btnDelete, btnRefresh });
+            toolStrip1.Items.AddRange(new ToolStripItem[] { btnOpen, toolStripSeparator1, btnAdd, btnDelete, btnRefresh });
             toolStrip1.Location = new Point(0, 0);
             toolStrip1.Name = "toolStrip1";
             toolStrip1.Padding = new Padding(5);
@@ -105,16 +104,6 @@ namespace TnsNamesEditor.Forms
             btnOpen.Size = new Size(90, 35);
             btnOpen.Text = "Abrir (F2)";
             btnOpen.Click += btnOpen_Click;
-            // 
-            // btnSave
-            // 
-            btnSave.AutoSize = false;
-            btnSave.DisplayStyle = ToolStripItemDisplayStyle.Text;
-            btnSave.Font = new Font("Segoe UI", 10F);
-            btnSave.Name = "btnSave";
-            btnSave.Size = new Size(100, 35);
-            btnSave.Text = "Salvar (F3)";
-            btnSave.Click += btnSave_Click;
             // 
             // toolStripSeparator1
             // 
@@ -267,7 +256,6 @@ namespace TnsNamesEditor.Forms
 
         private ToolStrip toolStrip1;
         private ToolStripButton btnOpen;
-        private ToolStripButton btnSave;
         private ToolStripSeparator toolStripSeparator1;
         private ToolStripButton btnAdd;
         private ToolStripButton btnEdit;

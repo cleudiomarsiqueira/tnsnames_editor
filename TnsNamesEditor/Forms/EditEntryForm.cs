@@ -1,4 +1,5 @@
 using TnsNamesEditor.Models;
+using TnsNamesEditor.Services;
 using System.Text.RegularExpressions;
 
 namespace TnsNamesEditor.Forms
@@ -60,12 +61,12 @@ namespace TnsNamesEditor.Forms
                         // Parse do texto TNS
                         if (ParseTnsText(tnsText))
                         {
-                            MessageBox.Show("Dados importados com sucesso!", 
-                                "Sucesso", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            MessageService.ShowSuccess("Dados importados com sucesso!");
                         }
                         else
                         {
-                            MessageBox.Show("Não foi possível interpretar o texto TNS.\n\n" +
+                            MessageService.ShowError(
+                                "Não foi possível interpretar o texto TNS.\n\n" +
                                 "Certifique-se de que está no formato:\n\n" +
                                 "NOME =\n" +
                                 "  (DESCRIPTION =\n" +
@@ -73,16 +74,14 @@ namespace TnsNamesEditor.Forms
                                 "    (CONNECT_DATA =\n" +
                                 "      (SERVICE_NAME = ...)\n" +
                                 "    )\n" +
-                                "  )", 
-                                "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                "  )");
                         }
                     }
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Erro ao colar: {ex.Message}", 
-                    "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageService.ShowError("Erro ao colar:", "Erro", ex);
             }
         }
 
@@ -157,23 +156,46 @@ namespace TnsNamesEditor.Forms
             // Validações
             if (string.IsNullOrWhiteSpace(txtName.Text))
             {
-                MessageBox.Show("O nome da entrada é obrigatório.", "Validação", 
-                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageService.ShowValidation("O nome da entrada é obrigatório.");
                 txtName.Focus();
                 return;
             }
 
-            // Verifica duplicata (apenas ao adicionar ou se o nome foi alterado)
+            // Cria uma entrada temporária para verificar duplicata completa
+            var tempEntry = new TnsEntry
+            {
+                Name = txtName.Text.Trim().ToUpper(),
+                Host = txtHost.Text.Trim(),
+                Port = txtPort.Text.Trim(),
+                ServiceName = txtServiceName.Text.Trim(),
+                Sid = txtSid.Text.Trim(),
+                Protocol = cmbProtocol.SelectedItem?.ToString() ?? "TCP",
+                Server = txtServer.Text.Trim()
+            };
+
+            // Verifica se já existe uma entrada idêntica (todos os campos iguais)
+            var identicalEntry = allEntries.FirstOrDefault(e => 
+                !e.Name.Equals(originalEntryName, StringComparison.OrdinalIgnoreCase) && 
+                e.IsIdenticalTo(tempEntry));
+            
+            if (identicalEntry != null)
+            {
+                MessageService.ShowWarning(
+                    $"Já existe uma entrada idêntica com o nome '{identicalEntry.Name}'.\n\nTodos os campos são iguais.",
+                    "Entrada Duplicada");
+                txtName.Focus();
+                return;
+            }
+
+            // Verifica duplicata de nome (apenas se o nome foi alterado)
             string newName = txtName.Text.Trim().ToUpper();
             if (!newName.Equals(originalEntryName, StringComparison.OrdinalIgnoreCase))
             {
                 if (allEntries.Any(e => e.Name.Equals(newName, StringComparison.OrdinalIgnoreCase)))
                 {
-                    MessageBox.Show(
-                        $"Já existe uma entrada com o nome '{newName}'.\n\nEscolha outro nome ou cancele para não alterar.",
-                        "Nome Duplicado", 
-                        MessageBoxButtons.OK, 
-                        MessageBoxIcon.Warning);
+                    MessageService.ShowWarning(
+                        $"Já existe uma entrada com o nome '{newName}', mas com dados diferentes.\n\nEscolha outro nome ou cancele para não alterar.",
+                        "Nome Duplicado");
                     txtName.Focus();
                     return;
                 }
@@ -181,24 +203,21 @@ namespace TnsNamesEditor.Forms
 
             if (string.IsNullOrWhiteSpace(txtHost.Text))
             {
-                MessageBox.Show("O host é obrigatório.", "Validação", 
-                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageService.ShowValidation("O host é obrigatório.");
                 txtHost.Focus();
                 return;
             }
 
             if (string.IsNullOrWhiteSpace(txtPort.Text))
             {
-                MessageBox.Show("A porta é obrigatória.", "Validação", 
-                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageService.ShowValidation("A porta é obrigatória.");
                 txtPort.Focus();
                 return;
             }
 
             if (!int.TryParse(txtPort.Text, out _))
             {
-                MessageBox.Show("A porta deve ser um número válido.", "Validação", 
-                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageService.ShowValidation("A porta deve ser um número válido.");
                 txtPort.Focus();
                 return;
             }
@@ -206,8 +225,7 @@ namespace TnsNamesEditor.Forms
             if (string.IsNullOrWhiteSpace(txtServiceName.Text) && 
                 string.IsNullOrWhiteSpace(txtSid.Text))
             {
-                MessageBox.Show("É necessário informar pelo menos Service Name ou SID.", 
-                    "Validação", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageService.ShowValidation("É necessário informar pelo menos Service Name ou SID.");
                 txtServiceName.Focus();
                 return;
             }

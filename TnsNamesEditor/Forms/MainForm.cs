@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using TnsNamesEditor.Models;
+using TnsNamesEditor.Services;
 
 namespace TnsNamesEditor.Forms
 {
@@ -102,7 +103,7 @@ namespace TnsNamesEditor.Forms
             }
             catch (Exception ex)
             {
-                UpdateStatus($"Erro ao carregar arquivo: {ex.Message}");
+                ShowError("Erro ao carregar arquivo:", "Erro ao Carregar", ex);
             }
         }
 
@@ -186,6 +187,19 @@ namespace TnsNamesEditor.Forms
             lblStatus.Text = message;
         }
 
+        // Métodos de conveniência que delegam para o MessageService
+        private void ShowError(string message, string title = "Erro", Exception? exception = null)
+            => MessageService.ShowError(message, title, exception);
+
+        private void ShowWarning(string message, string title = "Atenção")
+            => MessageService.ShowWarning(message, title);
+
+        private void ShowSuccess(string message, string title = "Sucesso")
+            => MessageService.ShowSuccess(message, title);
+
+        private bool ShowConfirmation(string message, string title = "Confirmação")
+            => MessageService.ShowConfirmation(message, title);
+
         private void SaveChanges(string statusMessage)
         {
             if (!string.IsNullOrEmpty(currentFilePath))
@@ -197,7 +211,7 @@ namespace TnsNamesEditor.Forms
                 }
                 catch (Exception ex)
                 {
-                    UpdateStatus($"Erro ao salvar arquivo: {ex.Message}");
+                    ShowError("Erro ao salvar arquivo:", "Erro ao Salvar", ex);
                 }
             }
             else
@@ -224,33 +238,6 @@ namespace TnsNamesEditor.Forms
             }
         }
 
-        private void btnSave_Click(object sender, EventArgs e)
-        {
-            if (string.IsNullOrEmpty(currentFilePath))
-            {
-                saveFileDialog1.InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
-                
-                if (saveFileDialog1.ShowDialog() == DialogResult.OK)
-                {
-                    currentFilePath = saveFileDialog1.FileName;
-                }
-                else
-                {
-                    return;
-                }
-            }
-
-            try
-            {
-                TnsNamesParser.SaveToFile(currentFilePath, entries);
-                UpdateStatus($"Arquivo salvo com sucesso: {entries.Count} entrada(s)");
-            }
-            catch (Exception ex)
-            {
-                UpdateStatus($"Erro ao salvar arquivo: {ex.Message}");
-            }
-        }
-
         private void btnAdd_Click(object sender, EventArgs e)
         {
             var entry = new TnsEntry
@@ -263,25 +250,38 @@ namespace TnsNamesEditor.Forms
             {
                 if (editForm.ShowDialog() == DialogResult.OK)
                 {
-                    // Verifica duplicata
-                    if (entries.Any(e => e.Name.Equals(entry.Name, StringComparison.OrdinalIgnoreCase)))
+                    // Verifica se já existe uma entrada idêntica (todos os campos iguais)
+                    var identicalEntry = entries.FirstOrDefault(e => e.IsIdenticalTo(entry));
+                    
+                    if (identicalEntry != null)
                     {
-                        // Remove a entrada antiga
-                        var oldEntry = entries.FirstOrDefault(e => e.Name.Equals(entry.Name, StringComparison.OrdinalIgnoreCase));
-                        if (oldEntry != null)
+                        ShowWarning(
+                            $"Já existe uma entrada idêntica a esta.\n\nNome: {entry.Name}\nHost: {entry.Host}\nPorta: {entry.Port}\nService Name: {entry.ServiceName}",
+                            "Entrada Duplicada");
+                        return;
+                    }
+                    
+                    // Verifica se existe uma entrada com o mesmo nome mas dados diferentes
+                    var sameNameEntry = entries.FirstOrDefault(e => e.Name.Equals(entry.Name, StringComparison.OrdinalIgnoreCase));
+                    
+                    if (sameNameEntry != null)
+                    {
+                        if (ShowConfirmation(
+                            $"Já existe uma entrada com o nome '{entry.Name}' mas com dados diferentes.\n\nDeseja substituir a entrada existente?",
+                            "Nome Duplicado"))
                         {
-                            entries.Remove(oldEntry);
+                            entries.Remove(sameNameEntry);
+                            entries.Add(entry);
+                            RefreshGrid();
+                            SaveChanges($"Entrada '{entry.Name}' substituída e salva");
                         }
-                        entries.Add(entry);
-                        RefreshGrid();
-                        SaveChanges($"Entrada '{entry.Name}' substituída e salva");
+                        return;
                     }
-                    else
-                    {
-                        entries.Add(entry);
-                        RefreshGrid();
-                        SaveChanges($"Entrada '{entry.Name}' adicionada e salva");
-                    }
+                    
+                    // Entrada nova, adiciona normalmente
+                    entries.Add(entry);
+                    RefreshGrid();
+                    SaveChanges($"Entrada '{entry.Name}' adicionada e salva");
                 }
             }
         }
@@ -302,26 +302,61 @@ namespace TnsNamesEditor.Forms
 
             var selectedEntry = (TnsEntry)dataGridView1.SelectedRows[0].DataBoundItem;
             var originalName = selectedEntry.Name;
+            var originalIndex = entries.IndexOf(selectedEntry);
+            
+            // Cria uma cópia da entrada para edição
+            var editedEntry = new TnsEntry
+            {
+                Name = selectedEntry.Name,
+                Host = selectedEntry.Host,
+                Port = selectedEntry.Port,
+                ServiceName = selectedEntry.ServiceName,
+                Sid = selectedEntry.Sid,
+                Protocol = selectedEntry.Protocol,
+                Server = selectedEntry.Server,
+                RawContent = selectedEntry.RawContent
+            };
 
-            using (var editForm = new EditEntryForm(selectedEntry, entries, originalName))
+            using (var editForm = new EditEntryForm(editedEntry, entries, originalName))
             {
                 if (editForm.ShowDialog() == DialogResult.OK)
                 {
-                    // Verifica se o nome foi alterado e se já existe outro com o novo nome
-                    if (!originalName.Equals(selectedEntry.Name, StringComparison.OrdinalIgnoreCase))
+                    // Verifica se já existe uma entrada idêntica (exceto a que está sendo editada)
+                    var identicalEntry = entries.FirstOrDefault(e => 
+                        !e.Name.Equals(originalName, StringComparison.OrdinalIgnoreCase) && 
+                        e.IsIdenticalTo(editedEntry));
+                    
+                    if (identicalEntry != null)
                     {
-                        if (entries.Any(e => e.Name.Equals(selectedEntry.Name, StringComparison.OrdinalIgnoreCase) && 
+                        ShowWarning(
+                            $"Já existe uma entrada idêntica com o nome '{identicalEntry.Name}'.\n\nTodos os campos são iguais.",
+                            "Entrada Duplicada");
+                        return;
+                    }
+                    
+                    // Verifica se o nome foi alterado e se já existe outro com o novo nome
+                    if (!originalName.Equals(editedEntry.Name, StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (entries.Any(e => e.Name.Equals(editedEntry.Name, StringComparison.OrdinalIgnoreCase) && 
                                            !e.Name.Equals(originalName, StringComparison.OrdinalIgnoreCase)))
                         {
-                            UpdateStatus($"Já existe uma entrada com o nome '{selectedEntry.Name}'. Escolha outro nome");
-                            // Restaura o nome original
-                            selectedEntry.Name = originalName;
+                            ShowWarning(
+                                $"Já existe uma entrada com o nome '{editedEntry.Name}', mas com dados diferentes.\n\nEscolha outro nome.",
+                                "Nome Duplicado");
                             return;
                         }
                     }
                     
-                    RefreshGrid();
-                    SaveChanges($"Entrada '{selectedEntry.Name}' atualizada e salva");
+                    // Remove a entrada original e adiciona a editada na mesma posição
+                    entries.RemoveAt(originalIndex);
+                    entries.Insert(originalIndex, editedEntry);
+                    
+                    // Salva as alterações
+                    SaveChanges($"Entrada '{editedEntry.Name}' atualizada e salva");
+                    
+                    // Recarrega o arquivo para garantir sincronia
+                    LoadFile(currentFilePath);
+                    UpdateStatus($"Entrada '{editedEntry.Name}' atualizada com sucesso");
                 }
             }
         }
@@ -401,10 +436,6 @@ namespace TnsNamesEditor.Forms
             {
                 case Keys.F2:
                     btnOpen_Click(sender, e);
-                    e.Handled = true;
-                    break;
-                case Keys.F3:
-                    btnSave_Click(sender, e);
                     e.Handled = true;
                     break;
                 case Keys.F4:

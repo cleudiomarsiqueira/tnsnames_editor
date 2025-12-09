@@ -1,3 +1,5 @@
+using TnsNamesEditor.Services;
+
 namespace TnsNamesEditor.Forms
 {
     public partial class PasteTnsForm : Form
@@ -32,14 +34,12 @@ namespace TnsNamesEditor.Forms
                 }
                 else
                 {
-                    MessageBox.Show("Nenhum texto encontrado na área de transferência.", 
-                        "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageService.ShowInfo("Nenhum texto encontrado na área de transferência.", "Aviso");
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Erro ao colar: {ex.Message}", 
-                    "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageService.ShowError("Erro ao colar:", "Erro", ex);
             }
         }
 
@@ -47,8 +47,7 @@ namespace TnsNamesEditor.Forms
         {
             if (string.IsNullOrWhiteSpace(txtTnsContent.Text))
             {
-                MessageBox.Show("Por favor, digite ou cole o conteúdo da entrada TNS.", 
-                    "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageService.ShowValidation("Por favor, digite ou cole o conteúdo da entrada TNS.");
                 txtTnsContent.Focus();
                 return;
             }

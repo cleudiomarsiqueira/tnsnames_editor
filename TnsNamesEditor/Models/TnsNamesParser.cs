@@ -14,6 +14,20 @@ namespace TnsNamesEditor.Models
         public string Server { get; set; } = string.Empty;
         public string RawContent { get; set; } = string.Empty;
 
+        // Verifica se duas entradas são idênticas (comparando todos os campos relevantes)
+        public bool IsIdenticalTo(TnsEntry other)
+        {
+            if (other == null) return false;
+            
+            return Name.Equals(other.Name, StringComparison.OrdinalIgnoreCase) &&
+                   Host.Equals(other.Host, StringComparison.OrdinalIgnoreCase) &&
+                   Port.Equals(other.Port, StringComparison.OrdinalIgnoreCase) &&
+                   ServiceName.Equals(other.ServiceName, StringComparison.OrdinalIgnoreCase) &&
+                   Sid.Equals(other.Sid, StringComparison.OrdinalIgnoreCase) &&
+                   Protocol.Equals(other.Protocol, StringComparison.OrdinalIgnoreCase) &&
+                   Server.Equals(other.Server, StringComparison.OrdinalIgnoreCase);
+        }
+
         public string ToTnsFormat()
         {
             var sb = new StringBuilder();
@@ -169,7 +183,10 @@ namespace TnsNamesEditor.Models
             sb.AppendLine();
             sb.AppendLine();
 
-            foreach (var entry in entries)
+            // Ordena as entradas por nome antes de salvar
+            var sortedEntries = entries.OrderBy(e => e.Name, StringComparer.OrdinalIgnoreCase).ToList();
+
+            foreach (var entry in sortedEntries)
             {
                 sb.Append(entry.ToTnsFormat());
                 sb.AppendLine();
