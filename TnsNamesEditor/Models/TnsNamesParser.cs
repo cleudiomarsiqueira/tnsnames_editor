@@ -10,7 +10,7 @@ namespace TnsNamesEditor.Models
         public string Port { get; set; } = string.Empty;
         public string ServiceName { get; set; } = string.Empty;
         public string Sid { get; set; } = string.Empty;
-        public string Protocol { get; set; } = "TCP";
+        public string Protocol { get; set; } = string.Empty;
         public string Server { get; set; } = string.Empty;
         public string RawContent { get; set; } = string.Empty;
 
@@ -150,9 +150,6 @@ namespace TnsNamesEditor.Models
                 entry.Server = ExtractValue(entryText, "SERVER");
                 
                 // Define valores padrão se estiverem vazios
-                if (string.IsNullOrEmpty(entry.Protocol))
-                    entry.Protocol = "TCP";
-
                 entries.Add(entry);
             }
 

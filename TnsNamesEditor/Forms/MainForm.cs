@@ -146,7 +146,7 @@ namespace TnsNamesEditor.Forms
             }
         }
 
-        private void LoadFile(string filePath)
+        private void LoadFile(string filePath, string? statusOverride = null)
         {
             try
             {
@@ -156,7 +156,7 @@ namespace TnsNamesEditor.Forms
 
                 if (!parsedEntries.Any())
                 {
-                    HandleNoValidEntriesFound(filePath);
+                    ApplyEmptyFileState(filePath, statusOverride);
                     return;
                 }
 
@@ -165,7 +165,7 @@ namespace TnsNamesEditor.Forms
                 filteredEntries.Clear();
 
                 RebindGridAfterDataChange();
-                UpdateStatus($"Arquivo carregado com sucesso: {entries.Count} entrada(s)");
+                UpdateStatus(statusOverride ?? $"Arquivo carregado com sucesso: {entries.Count} entrada(s)");
                 UpdateFilePathLabel(filePath);
             }
             catch (Exception ex)
@@ -174,23 +174,15 @@ namespace TnsNamesEditor.Forms
             }
         }
 
-        private void HandleNoValidEntriesFound(string filePath)
+        private void ApplyEmptyFileState(string filePath, string? statusOverride)
         {
             entries.Clear();
             filteredEntries.Clear();
-            currentFilePath = string.Empty;
+            currentFilePath = filePath;
 
-            RefreshGrid();
-            UpdateAvailableActions();
-            UpdateFilePathLabel(string.Empty);
-            UpdateStatus("Nenhum arquivo carregado. Use 'Abrir' para selecionar um arquivo.");
-
-            var fileName = Path.GetFileName(filePath);
-            var message = $"O arquivo '{fileName}' foi encontrado, porém não contém entradas válidas.\n\nDeseja selecionar outro arquivo agora?";
-            if (ShowConfirmation(message, "Arquivo inválido"))
-            {
-                btnOpen_Click(this, EventArgs.Empty);
-            }
+            RebindGridAfterDataChange();
+            UpdateFilePathLabel(filePath);
+            UpdateStatus(statusOverride ?? "Arquivo carregado, mas nenhuma entrada válida foi encontrada.");
         }
 
         private void RefreshGrid()
@@ -365,7 +357,7 @@ namespace TnsNamesEditor.Forms
                 try
                 {
                     TnsNamesParser.SaveToFile(currentFilePath, entries);
-                    UpdateStatus(statusMessage);
+                    LoadFile(currentFilePath, statusMessage);
                 }
                 catch (Exception ex)
                 {
@@ -403,11 +395,7 @@ namespace TnsNamesEditor.Forms
                 return;
             }
 
-            var entry = new TnsEntry
-            {
-                Protocol = "TCP",
-                Port = "1521"
-            };
+            var entry = new TnsEntry();
 
             using (var editForm = new EditEntryForm(entry, entries))
             {

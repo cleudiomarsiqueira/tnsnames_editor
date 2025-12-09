@@ -28,23 +28,46 @@ namespace TnsNamesEditor.Forms
             txtSid.Text = entry.Sid;
             txtServer.Text = entry.Server;
             
-            // Seleciona o protocolo
-            cmbProtocol.SelectedItem = entry.Protocol;
-            if (cmbProtocol.SelectedIndex < 0)
+            // Seleciona o protocolo sem aplicar valores padrão
+            cmbProtocol.SelectedIndex = -1;
+            if (!string.IsNullOrWhiteSpace(entry.Protocol))
             {
-                cmbProtocol.SelectedIndex = 0; // TCP por padrão
+                int protocolIndex = cmbProtocol.FindStringExact(entry.Protocol);
+                if (protocolIndex >= 0)
+                {
+                    cmbProtocol.SelectedIndex = protocolIndex;
+                }
             }
 
-            // Adiciona eventos para atualização automática do preview
-            txtName.TextChanged += (s, ev) => UpdatePreview();
-            txtHost.TextChanged += (s, ev) => UpdatePreview();
-            txtPort.TextChanged += (s, ev) => UpdatePreview();
-            txtServiceName.TextChanged += (s, ev) => UpdatePreview();
-            txtSid.TextChanged += (s, ev) => UpdatePreview();
-            txtServer.TextChanged += (s, ev) => UpdatePreview();
-            cmbProtocol.SelectedIndexChanged += (s, ev) => UpdatePreview();
+            // Adiciona eventos para atualização automática do preview e do estado do botão OK
+            txtName.TextChanged += OnEntryFieldChanged;
+            txtHost.TextChanged += OnEntryFieldChanged;
+            txtPort.TextChanged += OnEntryFieldChanged;
+            txtServiceName.TextChanged += OnEntryFieldChanged;
+            txtSid.TextChanged += OnEntryFieldChanged;
+            txtServer.TextChanged += OnEntryFieldChanged;
+            cmbProtocol.SelectedIndexChanged += OnEntryFieldChanged;
 
             UpdatePreview();
+            UpdateOkButtonState();
+        }
+
+        private void OnEntryFieldChanged(object? sender, EventArgs e)
+        {
+            UpdatePreview();
+            UpdateOkButtonState();
+        }
+
+        private void UpdateOkButtonState()
+        {
+            bool hasName = !string.IsNullOrWhiteSpace(txtName.Text);
+            bool hasHost = !string.IsNullOrWhiteSpace(txtHost.Text);
+            bool hasPort = !string.IsNullOrWhiteSpace(txtPort.Text);
+            bool portIsValid = int.TryParse(txtPort.Text.Trim(), out _);
+            bool hasServiceName = !string.IsNullOrWhiteSpace(txtServiceName.Text);
+            bool protocolSelected = cmbProtocol.SelectedItem != null;
+
+            btnOk.Enabled = hasName && hasHost && hasPort && portIsValid && hasServiceName && protocolSelected;
         }
 
         private void btnPaste_Click(object sender, EventArgs e)
@@ -120,7 +143,15 @@ namespace TnsNamesEditor.Forms
             if (protocolMatch.Success)
             {
                 string protocol = protocolMatch.Groups[1].Value.Trim();
-                cmbProtocol.SelectedItem = protocol;
+                int protocolIndex = cmbProtocol.FindStringExact(protocol);
+                if (protocolIndex >= 0)
+                {
+                    cmbProtocol.SelectedIndex = protocolIndex;
+                }
+                else
+                {
+                    cmbProtocol.SelectedIndex = -1;
+                }
             }
 
             // Extrai SERVICE_NAME
@@ -147,6 +178,8 @@ namespace TnsNamesEditor.Forms
                 txtServer.Text = serverMatch.Groups[1].Value.Trim();
             }
 
+            UpdateOkButtonState();
+
             // Retorna true se conseguiu extrair pelo menos nome e host
             return nameMatch.Success && hostMatch.Success;
         }
@@ -169,7 +202,7 @@ namespace TnsNamesEditor.Forms
                 Port = txtPort.Text.Trim(),
                 ServiceName = txtServiceName.Text.Trim(),
                 Sid = txtSid.Text.Trim(),
-                Protocol = cmbProtocol.SelectedItem?.ToString() ?? "TCP",
+                Protocol = cmbProtocol.SelectedItem?.ToString() ?? string.Empty,
                 Server = txtServer.Text.Trim()
             };
 
@@ -222,10 +255,9 @@ namespace TnsNamesEditor.Forms
                 return;
             }
 
-            if (string.IsNullOrWhiteSpace(txtServiceName.Text) && 
-                string.IsNullOrWhiteSpace(txtSid.Text))
+            if (string.IsNullOrWhiteSpace(txtServiceName.Text))
             {
-                MessageService.ShowValidation("É necessário informar pelo menos Service Name ou SID.");
+                MessageService.ShowValidation("O Service Name é obrigatório.");
                 txtServiceName.Focus();
                 return;
             }
@@ -237,7 +269,7 @@ namespace TnsNamesEditor.Forms
             entry.ServiceName = txtServiceName.Text.Trim();
             entry.Sid = txtSid.Text.Trim();
             entry.Server = txtServer.Text.Trim();
-            entry.Protocol = cmbProtocol.SelectedItem?.ToString() ?? "TCP";
+            entry.Protocol = cmbProtocol.SelectedItem?.ToString() ?? string.Empty;
 
             DialogResult = DialogResult.OK;
             Close();
@@ -254,7 +286,7 @@ namespace TnsNamesEditor.Forms
                 ServiceName = txtServiceName.Text.Trim(),
                 Sid = txtSid.Text.Trim(),
                 Server = txtServer.Text.Trim(),
-                Protocol = cmbProtocol.SelectedItem?.ToString() ?? "TCP"
+                Protocol = cmbProtocol.SelectedItem?.ToString() ?? string.Empty
             };
 
             txtPreview.Text = tempEntry.ToTnsFormat();
