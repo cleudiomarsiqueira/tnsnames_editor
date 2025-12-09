@@ -40,10 +40,10 @@ namespace TnsNamesEditor.Forms
         {
             menuEdit.Click += (s, e) => btnEdit_Click(this, EventArgs.Empty);
             menuDelete.Click += (s, e) => btnDelete_Click(this, EventArgs.Empty);
-            menuCopy.Click += (s, e) => menuCopy_Click(s, e);
+            menuCopy.Click += (s, e) => menuCopy_Click(s!, e);
         }
 
-        private void DataGridView1_SelectionChanged(object sender, EventArgs e)
+        private void DataGridView1_SelectionChanged(object? sender, EventArgs e)
         {
             int selectedCount = dataGridView1.SelectedRows.Count;
             
