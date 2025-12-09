@@ -196,6 +196,7 @@ namespace TnsNamesEditor.Forms
             lblFilePath.Size = new Size(994, 17);
             lblFilePath.Spring = true;
             lblFilePath.TextAlign = ContentAlignment.MiddleRight;
+            lblFilePath.Click += lblFilePath_Click;
             // 
             // dataGridView1
             // 

@@ -1,4 +1,8 @@
+using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
 using TnsNamesEditor.Models;
 using TnsNamesEditor.Services;
 
@@ -9,16 +13,19 @@ namespace TnsNamesEditor.Forms
         private List<TnsEntry> entries = new List<TnsEntry>();
         private List<TnsEntry> filteredEntries = new List<TnsEntry>();
         private string currentFilePath = string.Empty;
-        private readonly string defaultTnsPath = @"C:\oracle\product\19.0.0\client_1\network\admin\tnsnames.ora";
+        private readonly List<string> defaultTnsPaths;
         private string? lastSortColumn = null;
         private SortOrder lastSortOrder = SortOrder.None;
 
         public MainForm()
         {
             InitializeComponent();
+            defaultTnsPaths = BuildDefaultTnsPathList();
             AttachContextMenuHandlers();
             dataGridView1.SelectionChanged += DataGridView1_SelectionChanged;
             LoadIcon();
+            UpdateFilePathLabel(string.Empty);
+            UpdateAvailableActions();
         }
 
         private void LoadIcon()
@@ -37,6 +44,79 @@ namespace TnsNamesEditor.Forms
             }
         }
 
+        private List<string> BuildDefaultTnsPathList()
+        {
+            var paths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            void AddPath(string? candidate)
+            {
+                if (string.IsNullOrWhiteSpace(candidate))
+                {
+                    return;
+                }
+
+                try
+                {
+                    var normalized = Path.GetFullPath(candidate);
+                    paths.Add(normalized);
+                }
+                catch
+                {
+                    paths.Add(candidate);
+                }
+            }
+
+            var tnsAdmin = Environment.GetEnvironmentVariable("TNS_ADMIN");
+            if (!string.IsNullOrWhiteSpace(tnsAdmin))
+            {
+                AddPath(Path.Combine(tnsAdmin, "tnsnames.ora"));
+            }
+
+            var oracleHome = Environment.GetEnvironmentVariable("ORACLE_HOME");
+            if (!string.IsNullOrWhiteSpace(oracleHome))
+            {
+                AddPath(Path.Combine(oracleHome, "network", "admin", "tnsnames.ora"));
+            }
+
+            string[] baseDirs =
+            {
+                @"C:\\oracle",
+                @"C:\\app\\oracle",
+                @"C:\\Oracle",
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Oracle"),
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "Oracle")
+            };
+
+            string[] versions = { "21", "19", "18", "12", "11" };
+            string[] homeFolders = { "client_1", "dbhome_1", "home" };
+
+            foreach (var baseDir in baseDirs)
+            {
+                if (string.IsNullOrWhiteSpace(baseDir))
+                {
+                    continue;
+                }
+
+                AddPath(Path.Combine(baseDir, "network", "admin", "tnsnames.ora"));
+
+                foreach (var version in versions)
+                {
+                    AddPath(Path.Combine(baseDir, "product", $"{version}.0.0", "network", "admin", "tnsnames.ora"));
+
+                    foreach (var homeFolder in homeFolders)
+                    {
+                        AddPath(Path.Combine(baseDir, "product", $"{version}.0.0", homeFolder, "network", "admin", "tnsnames.ora"));
+                    }
+                }
+            }
+
+            // Caminhos comuns de exemplos/desktop
+            AddPath(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "tnsnames.ora"));
+            AddPath(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "tnsnames.ora"));
+
+            return paths.ToList();
+        }
+
         private void AttachContextMenuHandlers()
         {
             menuEdit.Click += (s, e) => btnEdit_Click(this, EventArgs.Empty);
@@ -46,44 +126,23 @@ namespace TnsNamesEditor.Forms
 
         private void DataGridView1_SelectionChanged(object? sender, EventArgs e)
         {
-            int selectedCount = dataGridView1.SelectedRows.Count;
-            
-            // Habilita/desabilita botões baseado na quantidade de seleções
-            bool singleSelection = selectedCount == 1;
-            bool hasSelection = selectedCount > 0;
-            
-            // Editar e Copiar: apenas com uma seleção (somente menu contexto)
-            menuEdit.Enabled = singleSelection;
-            menuCopy.Enabled = singleSelection;
-            
-            // Excluir: com uma ou mais seleções
-            btnDelete.Enabled = hasSelection;
-            menuDelete.Enabled = hasSelection;
+            UpdateSelectionDependentActions();
         }
 
         private void MainForm_Load(object sender, EventArgs e)
         {
-            // Tenta carregar o arquivo padrão se existir
-            if (File.Exists(defaultTnsPath))
+            if (TryLoadDefaultFileFromKnownLocations())
             {
-                LoadFile(defaultTnsPath);
+                return;
             }
-            else
+
+            UpdateFilePathLabel(string.Empty);
+            UpdateStatus("Nenhum arquivo carregado. Use 'Abrir' para selecionar um arquivo.");
+
+            var message = "Não foi possível localizar o arquivo tnsnames.ora automaticamente nas pastas padrão conhecidas.\n\nDeseja selecionar o arquivo manualmente agora?";
+            if (ShowConfirmation(message, "Arquivo não encontrado"))
             {
-                // Tenta o arquivo na área de trabalho
-                var desktopPath = Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.Desktop),
-                    "tnsnames.ora"
-                );
-                
-                if (File.Exists(desktopPath))
-                {
-                    LoadFile(desktopPath);
-                }
-                else
-                {
-                    UpdateStatus("Nenhum arquivo carregado. Use 'Abrir' para selecionar um arquivo.");
-                }
+                btnOpen_Click(this, EventArgs.Empty);
             }
         }
 
@@ -91,19 +150,46 @@ namespace TnsNamesEditor.Forms
         {
             try
             {
+                var parsedEntries = TnsNamesParser.ParseFile(filePath)
+                    .OrderBy(e => e.Name)
+                    .ToList();
+
+                if (!parsedEntries.Any())
+                {
+                    HandleNoValidEntriesFound(filePath);
+                    return;
+                }
+
+                entries = parsedEntries;
                 currentFilePath = filePath;
-                entries = TnsNamesParser.ParseFile(filePath);
-                
-                // Ordena por ordem alfabética pelo nome
-                entries = entries.OrderBy(e => e.Name).ToList();
+                filteredEntries.Clear();
 
                 RebindGridAfterDataChange();
                 UpdateStatus($"Arquivo carregado com sucesso: {entries.Count} entrada(s)");
-                lblFilePath.Text = filePath;
+                UpdateFilePathLabel(filePath);
             }
             catch (Exception ex)
             {
                 ShowError("Erro ao carregar arquivo:", "Erro ao Carregar", ex);
+            }
+        }
+
+        private void HandleNoValidEntriesFound(string filePath)
+        {
+            entries.Clear();
+            filteredEntries.Clear();
+            currentFilePath = string.Empty;
+
+            RefreshGrid();
+            UpdateAvailableActions();
+            UpdateFilePathLabel(string.Empty);
+            UpdateStatus("Nenhum arquivo carregado. Use 'Abrir' para selecionar um arquivo.");
+
+            var fileName = Path.GetFileName(filePath);
+            var message = $"O arquivo '{fileName}' foi encontrado, porém não contém entradas válidas.\n\nDeseja selecionar outro arquivo agora?";
+            if (ShowConfirmation(message, "Arquivo inválido"))
+            {
+                btnOpen_Click(this, EventArgs.Empty);
             }
         }
 
@@ -187,6 +273,78 @@ namespace TnsNamesEditor.Forms
             lblStatus.Text = message;
         }
 
+        private void UpdateFilePathLabel(string? path)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                lblFilePath.IsLink = false;
+                lblFilePath.Text = string.Empty;
+                lblFilePath.ToolTipText = string.Empty;
+            }
+            else
+            {
+                lblFilePath.IsLink = true;
+                lblFilePath.Text = path;
+                lblFilePath.ToolTipText = path;
+            }
+        }
+
+        private void UpdateAvailableActions()
+        {
+            bool hasEntries = entries.Any();
+            bool hasFile = !string.IsNullOrWhiteSpace(currentFilePath);
+
+            txtSearch.Enabled = hasEntries;
+            dataGridView1.Enabled = hasEntries;
+            btnAdd.Enabled = hasFile;
+            btnRefresh.Enabled = hasFile;
+
+            if (!hasEntries)
+            {
+                dataGridView1.ClearSelection();
+                filteredEntries.Clear();
+            }
+
+            UpdateSelectionDependentActions();
+        }
+
+        private void UpdateSelectionDependentActions()
+        {
+            if (!entries.Any() || !dataGridView1.Enabled)
+            {
+                btnEdit.Enabled = false;
+                btnDelete.Enabled = false;
+                menuEdit.Enabled = false;
+                menuDelete.Enabled = false;
+                menuCopy.Enabled = false;
+                return;
+            }
+
+            int selectedCount = dataGridView1.SelectedRows.Count;
+            bool singleSelection = selectedCount == 1;
+            bool hasSelection = selectedCount > 0;
+
+            btnEdit.Enabled = singleSelection;
+            menuEdit.Enabled = singleSelection;
+            menuCopy.Enabled = singleSelection;
+            btnDelete.Enabled = hasSelection;
+            menuDelete.Enabled = hasSelection;
+        }
+
+        private bool TryLoadDefaultFileFromKnownLocations()
+        {
+            foreach (var path in defaultTnsPaths)
+            {
+                if (!string.IsNullOrWhiteSpace(path) && File.Exists(path))
+                {
+                    LoadFile(path);
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         // Métodos de conveniência que delegam para o MessageService
         private void ShowError(string message, string title = "Erro", Exception? exception = null)
             => MessageService.ShowError(message, title, exception);
@@ -240,6 +398,11 @@ namespace TnsNamesEditor.Forms
 
         private void btnAdd_Click(object sender, EventArgs e)
         {
+            if (!btnAdd.Enabled)
+            {
+                return;
+            }
+
             var entry = new TnsEntry
             {
                 Protocol = "TCP",
@@ -288,6 +451,11 @@ namespace TnsNamesEditor.Forms
 
         private void btnEdit_Click(object sender, EventArgs e)
         {
+            if (!btnEdit.Enabled)
+            {
+                return;
+            }
+
             if (dataGridView1.SelectedRows.Count == 0)
             {
                 UpdateStatus("Selecione uma entrada para editar");
@@ -363,6 +531,11 @@ namespace TnsNamesEditor.Forms
 
         private void btnDelete_Click(object sender, EventArgs e)
         {
+            if (!btnDelete.Enabled)
+            {
+                return;
+            }
+
             if (dataGridView1.SelectedRows.Count == 0)
             {
                 UpdateStatus("Selecione uma ou mais entradas para excluir");
@@ -396,6 +569,11 @@ namespace TnsNamesEditor.Forms
 
         private void btnRefresh_Click(object sender, EventArgs e)
         {
+            if (!btnRefresh.Enabled)
+            {
+                return;
+            }
+
             if (!string.IsNullOrEmpty(currentFilePath))
             {
                 LoadFile(currentFilePath);
@@ -404,7 +582,7 @@ namespace TnsNamesEditor.Forms
 
         private void dataGridView1_CellDoubleClick(object sender, DataGridViewCellEventArgs e)
         {
-            if (e.RowIndex >= 0)
+            if (e.RowIndex >= 0 && btnEdit.Enabled)
             {
                 btnEdit_Click(sender, e);
             }
@@ -413,7 +591,7 @@ namespace TnsNamesEditor.Forms
         private void MainForm_KeyDown(object sender, KeyEventArgs e)
         {
             // Ctrl + F para ativar a pesquisa
-            if (e.Control && e.KeyCode == Keys.F)
+            if (e.Control && e.KeyCode == Keys.F && txtSearch.Enabled)
             {
                 txtSearch.Focus();
                 txtSearch.SelectAll();
@@ -422,7 +600,7 @@ namespace TnsNamesEditor.Forms
             }
 
             // Ctrl + C para copiar entrada selecionada
-            if (e.Control && e.KeyCode == Keys.C)
+            if (e.Control && e.KeyCode == Keys.C && menuCopy.Enabled)
             {
                 if (dataGridView1.SelectedRows.Count == 1)
                 {
@@ -439,22 +617,28 @@ namespace TnsNamesEditor.Forms
                     e.Handled = true;
                     break;
                 case Keys.F4:
-                    btnAdd_Click(sender, e);
-                    e.Handled = true;
+                    if (btnAdd.Enabled)
+                    {
+                        btnAdd_Click(sender, e);
+                        e.Handled = true;
+                    }
                     break;
                 case Keys.F5:
-                    btnRefresh_Click(sender, e);
-                    e.Handled = true;
+                    if (btnRefresh.Enabled)
+                    {
+                        btnRefresh_Click(sender, e);
+                        e.Handled = true;
+                    }
                     break;
                 case Keys.Delete:
-                    if (dataGridView1.SelectedRows.Count > 0)
+                    if (btnDelete.Enabled && dataGridView1.SelectedRows.Count > 0)
                     {
                         btnDelete_Click(sender, e);
                         e.Handled = true;
                     }
                     break;
                 case Keys.Enter:
-                    if (dataGridView1.SelectedRows.Count > 0)
+                    if (btnEdit.Enabled && dataGridView1.SelectedRows.Count > 0)
                     {
                         btnEdit_Click(sender, e);
                         e.Handled = true;
@@ -488,6 +672,8 @@ namespace TnsNamesEditor.Forms
                 filteredEntries.Clear();
                 RefreshGrid();
             }
+
+            UpdateAvailableActions();
         }
 
         private void PerformSearch(bool updateStatus = true)
@@ -502,6 +688,7 @@ namespace TnsNamesEditor.Forms
                 {
                     UpdateStatus($"{entries.Count} entrada(s) carregada(s)");
                 }
+                UpdateAvailableActions();
                 return;
             }
 
@@ -519,6 +706,7 @@ namespace TnsNamesEditor.Forms
             
             if (!updateStatus)
             {
+                UpdateAvailableActions();
                 return;
             }
 
@@ -529,6 +717,42 @@ namespace TnsNamesEditor.Forms
             else
             {
                 UpdateStatus($"{filteredEntries.Count} resultado(s) encontrado(s)");
+            }
+
+            UpdateAvailableActions();
+        }
+
+        private void lblFilePath_Click(object sender, EventArgs e)
+        {
+            if (string.IsNullOrWhiteSpace(currentFilePath))
+            {
+                return;
+            }
+
+            try
+            {
+                var directory = Path.GetDirectoryName(currentFilePath);
+
+                if (string.IsNullOrEmpty(directory) || !Directory.Exists(directory))
+                {
+                    ShowWarning("A pasta do arquivo não foi encontrada.", "Abrir no Explorer");
+                    return;
+                }
+
+                string arguments = File.Exists(currentFilePath)
+                    ? $"/select,\"{currentFilePath}\""
+                    : $"\"{directory}\"";
+
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = "explorer.exe",
+                    Arguments = arguments,
+                    UseShellExecute = true
+                });
+            }
+            catch (Exception ex)
+            {
+                ShowError("Não foi possível abrir o Explorer:", "Abrir no Explorer", ex);
             }
         }
 
@@ -649,6 +873,11 @@ namespace TnsNamesEditor.Forms
 
         private void menuCopy_Click(object sender, EventArgs e)
         {
+            if (!menuCopy.Enabled)
+            {
+                return;
+            }
+
             if (dataGridView1.SelectedRows.Count == 0)
             {
                 UpdateStatus("Selecione uma entrada para copiar");
