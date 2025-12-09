@@ -39,6 +39,7 @@ namespace TnsNamesEditor.Forms
             btnAdd = new ToolStripButton();
             btnDelete = new ToolStripButton();
             btnRefresh = new ToolStripButton();
+            btnCheckAll = new ToolStripButton();
             btnEdit = new ToolStripButton();
             searchPanel = new Panel();
             txtSearch = new TextBox();
@@ -87,7 +88,7 @@ namespace TnsNamesEditor.Forms
             toolStrip1.AutoSize = false;
             toolStrip1.GripStyle = ToolStripGripStyle.Hidden;
             toolStrip1.ImageScalingSize = new Size(32, 32);
-            toolStrip1.Items.AddRange(new ToolStripItem[] { btnOpen, toolStripSeparator1, btnAdd, btnDelete, btnRefresh });
+            toolStrip1.Items.AddRange(new ToolStripItem[] { btnOpen, toolStripSeparator1, btnAdd, btnDelete, btnRefresh, btnCheckAll });
             toolStrip1.Location = new Point(0, 0);
             toolStrip1.Name = "toolStrip1";
             toolStrip1.Padding = new Padding(5);
@@ -140,6 +141,18 @@ namespace TnsNamesEditor.Forms
             btnRefresh.Size = new Size(120, 35);
             btnRefresh.Text = "Atualizar (F5)";
             btnRefresh.Click += btnRefresh_Click;
+            // 
+            // btnCheckAll
+            // 
+            btnCheckAll.Alignment = ToolStripItemAlignment.Right;
+            btnCheckAll.AutoSize = false;
+            btnCheckAll.DisplayStyle = ToolStripItemDisplayStyle.Text;
+            btnCheckAll.Font = new Font("Segoe UI", 10F);
+            btnCheckAll.Name = "btnCheckAll";
+            btnCheckAll.Size = new Size(190, 35);
+            btnCheckAll.Text = "Testar novamente (F6)";
+            btnCheckAll.ToolTipText = "Executa novamente o tnsping para todas as entradas (F6)";
+            btnCheckAll.Click += btnCheckAll_Click;
             // 
             // btnEdit
             // 
@@ -262,6 +275,7 @@ namespace TnsNamesEditor.Forms
         private ToolStripButton btnEdit;
         private ToolStripButton btnDelete;
         private ToolStripButton btnRefresh;
+        private ToolStripButton btnCheckAll;
         private Panel searchPanel;
         private TextBox txtSearch;
         private StatusStrip statusStrip1;

@@ -318,6 +318,7 @@ namespace TnsNamesEditor.Forms
             dataGridView1.Enabled = hasEntries;
             btnAdd.Enabled = hasFile;
             btnRefresh.Enabled = hasFile;
+            btnCheckAll.Enabled = hasEntries;
 
             if (!hasEntries)
             {
@@ -631,6 +632,35 @@ namespace TnsNamesEditor.Forms
             }
         }
 
+        private void btnCheckAll_Click(object sender, EventArgs e)
+        {
+            if (!btnCheckAll.Enabled)
+            {
+                return;
+            }
+
+            if (!entries.Any())
+            {
+                UpdateStatus("Nenhuma entrada carregada para verificar.");
+                return;
+            }
+
+            foreach (var entry in entries)
+            {
+                if (string.IsNullOrWhiteSpace(entry.Name))
+                {
+                    continue;
+                }
+
+                pendingStatusRefresh.Add(entry.Name);
+                entry.ConnectionStatus = "Verificando...";
+            }
+
+            dataGridView1.Refresh();
+            UpdateStatus("Testando novamente todas as entradas...");
+            StartConnectionStatusRefresh(entries, forceRefresh: true);
+        }
+
         private void dataGridView1_CellDoubleClick(object sender, DataGridViewCellEventArgs e)
         {
             if (e.RowIndex >= 0 && btnEdit.Enabled)
@@ -678,6 +708,13 @@ namespace TnsNamesEditor.Forms
                     if (btnRefresh.Enabled)
                     {
                         btnRefresh_Click(sender, e);
+                        e.Handled = true;
+                    }
+                    break;
+                case Keys.F6:
+                    if (btnCheckAll.Enabled)
+                    {
+                        btnCheckAll_Click(sender, e);
                         e.Handled = true;
                     }
                     break;
