@@ -1,0 +1,31 @@
+# tnsnames.ora Network Configuration File - EXEMPLO
+# Este arquivo pode ser usado para testar o TNS Names Editor
+
+TESTE_PRODUCAO =
+  (DESCRIPTION =
+    (ADDRESS_LIST =
+      (ADDRESS = (PROTOCOL = TCP)(HOST = 10.171.130.119)(PORT = 1521))
+    )
+    (CONNECT_DATA =
+      (SERVICE_NAME = orcl_prod)
+    )
+  )
+
+TESTE_HOMOLOG =
+  (DESCRIPTION =
+    (ADDRESS_LIST =
+      (ADDRESS = (PROTOCOL = TCP)(HOST = 10.171.130.115)(PORT = 1521))
+    )
+    (CONNECT_DATA =
+      (SERVICE_NAME = orcl_hml)
+    )
+  )
+
+TESTE_DESENVOLVIMENTO =
+  (DESCRIPTION =
+    (ADDRESS = (PROTOCOL = TCP)(HOST = 10.171.130.125)(PORT = 1521))
+    (CONNECT_DATA =
+      (SERVER = DEDICATED)
+      (SID = dev_db)
+    )
+  )
