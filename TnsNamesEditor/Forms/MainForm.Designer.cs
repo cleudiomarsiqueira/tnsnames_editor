@@ -248,7 +248,7 @@ namespace TnsNamesEditor.Forms
             Margin = new Padding(3, 2, 3, 2);
             Name = "MainForm";
             StartPosition = FormStartPosition.CenterScreen;
-            Text = "TNS Names Editor";
+            Text = "TNS Names Editor - Cleudiomar Siqueira";
             Load += MainForm_Load;
             KeyDown += MainForm_KeyDown;
             contextMenuStrip1.ResumeLayout(false);
