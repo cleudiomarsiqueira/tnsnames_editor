@@ -96,8 +96,8 @@ namespace TnsNamesEditor.Forms
                 
                 // Ordena por ordem alfabética pelo nome
                 entries = entries.OrderBy(e => e.Name).ToList();
-                
-                RefreshGrid();
+
+                RebindGridAfterDataChange();
                 UpdateStatus($"Arquivo carregado com sucesso: {entries.Count} entrada(s)");
                 lblFilePath.Text = filePath;
             }
@@ -272,7 +272,7 @@ namespace TnsNamesEditor.Forms
                         {
                             entries.Remove(sameNameEntry);
                             entries.Add(entry);
-                            RefreshGrid();
+                            RebindGridAfterDataChange();
                             SaveChanges($"Entrada '{entry.Name}' substituída e salva");
                         }
                         return;
@@ -280,7 +280,7 @@ namespace TnsNamesEditor.Forms
                     
                     // Entrada nova, adiciona normalmente
                     entries.Add(entry);
-                    RefreshGrid();
+                    RebindGridAfterDataChange();
                     SaveChanges($"Entrada '{entry.Name}' adicionada e salva");
                 }
             }
@@ -385,7 +385,7 @@ namespace TnsNamesEditor.Forms
                 }
             }
             
-            RefreshGrid();
+            RebindGridAfterDataChange();
             
             string statusMessage = selectedEntries.Count == 1 
                 ? $"Entrada '{selectedEntries[0].Name}' excluída e salva"
@@ -477,7 +477,20 @@ namespace TnsNamesEditor.Forms
             }
         }
 
-        private void PerformSearch()
+        private void RebindGridAfterDataChange()
+        {
+            if (!string.IsNullOrWhiteSpace(txtSearch.Text))
+            {
+                PerformSearch(updateStatus: false);
+            }
+            else
+            {
+                filteredEntries.Clear();
+                RefreshGrid();
+            }
+        }
+
+        private void PerformSearch(bool updateStatus = true)
         {
             string searchText = txtSearch.Text.Trim().ToLower();
 
@@ -485,7 +498,10 @@ namespace TnsNamesEditor.Forms
             {
                 filteredEntries.Clear();
                 RefreshGrid();
-                UpdateStatus($"{entries.Count} entrada(s) carregada(s)");
+                if (updateStatus)
+                {
+                    UpdateStatus($"{entries.Count} entrada(s) carregada(s)");
+                }
                 return;
             }
 
@@ -501,6 +517,11 @@ namespace TnsNamesEditor.Forms
 
             RefreshGrid();
             
+            if (!updateStatus)
+            {
+                return;
+            }
+
             if (filteredEntries.Count == 0)
             {
                 UpdateStatus("Nenhum resultado encontrado");
