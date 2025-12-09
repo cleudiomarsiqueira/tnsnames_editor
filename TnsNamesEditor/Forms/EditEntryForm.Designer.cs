@@ -28,235 +28,246 @@ namespace TnsNamesEditor.Forms
         /// </summary>
         private void InitializeComponent()
         {
-            this.label1 = new System.Windows.Forms.Label();
-            this.txtName = new System.Windows.Forms.TextBox();
-            this.label2 = new System.Windows.Forms.Label();
-            this.txtHost = new System.Windows.Forms.TextBox();
-            this.label3 = new System.Windows.Forms.Label();
-            this.txtPort = new System.Windows.Forms.TextBox();
-            this.label4 = new System.Windows.Forms.Label();
-            this.txtServiceName = new System.Windows.Forms.TextBox();
-            this.label5 = new System.Windows.Forms.Label();
-            this.txtSid = new System.Windows.Forms.TextBox();
-            this.label6 = new System.Windows.Forms.Label();
-            this.cmbProtocol = new System.Windows.Forms.ComboBox();
-            this.label7 = new System.Windows.Forms.Label();
-            this.txtServer = new System.Windows.Forms.TextBox();
-            this.btnOk = new System.Windows.Forms.Button();
-            this.btnCancel = new System.Windows.Forms.Button();
-            this.groupBox1 = new System.Windows.Forms.GroupBox();
-            this.txtPreview = new System.Windows.Forms.TextBox();
-            this.groupBox1.SuspendLayout();
-            this.SuspendLayout();
+            label1 = new Label();
+            txtName = new TextBox();
+            label2 = new Label();
+            txtHost = new TextBox();
+            label3 = new Label();
+            txtPort = new TextBox();
+            label4 = new Label();
+            txtServiceName = new TextBox();
+            label5 = new Label();
+            txtSid = new TextBox();
+            label6 = new Label();
+            cmbProtocol = new ComboBox();
+            label7 = new Label();
+            txtServer = new TextBox();
+            btnOk = new Button();
+            btnCancel = new Button();
+            groupBox1 = new GroupBox();
+            txtPreview = new TextBox();
+            btnPaste = new Button();
+            groupBox1.SuspendLayout();
+            SuspendLayout();
             // 
             // label1
             // 
-            this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(20, 15);
-            this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(53, 20);
-            this.label1.TabIndex = 0;
-            this.label1.Text = "Nome:";
+            label1.AutoSize = true;
+            label1.Location = new Point(18, 11);
+            label1.Name = "label1";
+            label1.Size = new Size(43, 15);
+            label1.TabIndex = 0;
+            label1.Text = "Nome:";
             // 
             // txtName
             // 
-            this.txtName.Location = new System.Drawing.Point(20, 38);
-            this.txtName.Name = "txtName";
-            this.txtName.Size = new System.Drawing.Size(530, 27);
-            this.txtName.TabIndex = 1;
+            txtName.Location = new Point(18, 28);
+            txtName.Margin = new Padding(3, 2, 3, 2);
+            txtName.Name = "txtName";
+            txtName.Size = new Size(464, 23);
+            txtName.TabIndex = 1;
             // 
             // label2
             // 
-            this.label2.AutoSize = true;
-            this.label2.Location = new System.Drawing.Point(20, 75);
-            this.label2.Name = "label2";
-            this.label2.Size = new System.Drawing.Size(45, 20);
-            this.label2.TabIndex = 2;
-            this.label2.Text = "Host:";
+            label2.AutoSize = true;
+            label2.Location = new Point(18, 56);
+            label2.Name = "label2";
+            label2.Size = new Size(35, 15);
+            label2.TabIndex = 2;
+            label2.Text = "Host:";
             // 
             // txtHost
             // 
-            this.txtHost.Location = new System.Drawing.Point(20, 98);
-            this.txtHost.Name = "txtHost";
-            this.txtHost.Size = new System.Drawing.Size(350, 27);
-            this.txtHost.TabIndex = 3;
+            txtHost.Location = new Point(18, 74);
+            txtHost.Margin = new Padding(3, 2, 3, 2);
+            txtHost.Name = "txtHost";
+            txtHost.Size = new Size(307, 23);
+            txtHost.TabIndex = 3;
             // 
             // label3
             // 
-            this.label3.AutoSize = true;
-            this.label3.Location = new System.Drawing.Point(390, 75);
-            this.label3.Name = "label3";
-            this.label3.Size = new System.Drawing.Size(47, 20);
-            this.label3.TabIndex = 4;
-            this.label3.Text = "Porta:";
+            label3.AutoSize = true;
+            label3.Location = new Point(341, 56);
+            label3.Name = "label3";
+            label3.Size = new Size(38, 15);
+            label3.TabIndex = 4;
+            label3.Text = "Porta:";
             // 
             // txtPort
             // 
-            this.txtPort.Location = new System.Drawing.Point(390, 98);
-            this.txtPort.Name = "txtPort";
-            this.txtPort.Size = new System.Drawing.Size(160, 27);
-            this.txtPort.TabIndex = 5;
+            txtPort.Location = new Point(341, 74);
+            txtPort.Margin = new Padding(3, 2, 3, 2);
+            txtPort.Name = "txtPort";
+            txtPort.Size = new Size(140, 23);
+            txtPort.TabIndex = 5;
             // 
             // label4
             // 
-            this.label4.AutoSize = true;
-            this.label4.Location = new System.Drawing.Point(20, 135);
-            this.label4.Name = "label4";
-            this.label4.Size = new System.Drawing.Size(104, 20);
-            this.label4.TabIndex = 6;
-            this.label4.Text = "Service Name:";
+            label4.AutoSize = true;
+            label4.Location = new Point(18, 101);
+            label4.Name = "label4";
+            label4.Size = new Size(82, 15);
+            label4.TabIndex = 6;
+            label4.Text = "Service Name:";
             // 
             // txtServiceName
             // 
-            this.txtServiceName.Location = new System.Drawing.Point(20, 158);
-            this.txtServiceName.Name = "txtServiceName";
-            this.txtServiceName.Size = new System.Drawing.Size(530, 27);
-            this.txtServiceName.TabIndex = 7;
+            txtServiceName.Location = new Point(18, 118);
+            txtServiceName.Margin = new Padding(3, 2, 3, 2);
+            txtServiceName.Name = "txtServiceName";
+            txtServiceName.Size = new Size(464, 23);
+            txtServiceName.TabIndex = 7;
             // 
             // label5
             // 
-            this.label5.AutoSize = true;
-            this.label5.Location = new System.Drawing.Point(20, 195);
-            this.label5.Name = "label5";
-            this.label5.Size = new System.Drawing.Size(34, 20);
-            this.label5.TabIndex = 8;
-            this.label5.Text = "SID:";
+            label5.AutoSize = true;
+            label5.Location = new Point(18, 146);
+            label5.Name = "label5";
+            label5.Size = new Size(27, 15);
+            label5.TabIndex = 8;
+            label5.Text = "SID:";
             // 
             // txtSid
             // 
-            this.txtSid.Location = new System.Drawing.Point(20, 218);
-            this.txtSid.Name = "txtSid";
-            this.txtSid.Size = new System.Drawing.Size(530, 27);
-            this.txtSid.TabIndex = 9;
+            txtSid.Location = new Point(18, 164);
+            txtSid.Margin = new Padding(3, 2, 3, 2);
+            txtSid.Name = "txtSid";
+            txtSid.Size = new Size(464, 23);
+            txtSid.TabIndex = 9;
             // 
             // label6
             // 
-            this.label6.AutoSize = true;
-            this.label6.Location = new System.Drawing.Point(20, 255);
-            this.label6.Name = "label6";
-            this.label6.Size = new System.Drawing.Size(76, 20);
-            this.label6.TabIndex = 10;
-            this.label6.Text = "Protocolo:";
+            label6.AutoSize = true;
+            label6.Location = new Point(18, 191);
+            label6.Name = "label6";
+            label6.Size = new Size(62, 15);
+            label6.TabIndex = 10;
+            label6.Text = "Protocolo:";
             // 
             // cmbProtocol
             // 
-            this.cmbProtocol.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.cmbProtocol.FormattingEnabled = true;
-            this.cmbProtocol.Items.AddRange(new object[] {
-            "TCP",
-            "TCPS",
-            "IPC"});
-            this.cmbProtocol.Location = new System.Drawing.Point(20, 278);
-            this.cmbProtocol.Name = "cmbProtocol";
-            this.cmbProtocol.Size = new System.Drawing.Size(250, 28);
-            this.cmbProtocol.TabIndex = 11;
+            cmbProtocol.DropDownStyle = ComboBoxStyle.DropDownList;
+            cmbProtocol.FormattingEnabled = true;
+            cmbProtocol.Items.AddRange(new object[] { "TCP", "TCPS", "IPC" });
+            cmbProtocol.Location = new Point(18, 208);
+            cmbProtocol.Margin = new Padding(3, 2, 3, 2);
+            cmbProtocol.Name = "cmbProtocol";
+            cmbProtocol.Size = new Size(219, 23);
+            cmbProtocol.TabIndex = 11;
             // 
             // label7
             // 
-            this.label7.AutoSize = true;
-            this.label7.Location = new System.Drawing.Point(290, 255);
-            this.label7.Name = "label7";
-            this.label7.Size = new System.Drawing.Size(68, 20);
-            this.label7.TabIndex = 12;
-            this.label7.Text = "Servidor:";
+            label7.AutoSize = true;
+            label7.Location = new Point(254, 191);
+            label7.Name = "label7";
+            label7.Size = new Size(53, 15);
+            label7.TabIndex = 12;
+            label7.Text = "Servidor:";
             // 
             // txtServer
             // 
-            this.txtServer.Location = new System.Drawing.Point(290, 278);
-            this.txtServer.Name = "txtServer";
-            this.txtServer.Size = new System.Drawing.Size(260, 27);
-            this.txtServer.TabIndex = 13;
+            txtServer.Location = new Point(254, 208);
+            txtServer.Margin = new Padding(3, 2, 3, 2);
+            txtServer.Name = "txtServer";
+            txtServer.Size = new Size(228, 23);
+            txtServer.TabIndex = 13;
             // 
             // btnOk
             // 
-            this.btnOk.Location = new System.Drawing.Point(350, 560);
-            this.btnOk.Name = "btnOk";
-            this.btnOk.Size = new System.Drawing.Size(94, 30);
-            this.btnOk.TabIndex = 14;
-            this.btnOk.Text = "OK";
-            this.btnOk.UseVisualStyleBackColor = true;
-            this.btnOk.Click += new System.EventHandler(this.btnOk_Click);
+            btnOk.Location = new Point(309, 466);
+            btnOk.Margin = new Padding(3, 2, 3, 2);
+            btnOk.Name = "btnOk";
+            btnOk.Size = new Size(82, 22);
+            btnOk.TabIndex = 14;
+            btnOk.Text = "OK";
+            btnOk.UseVisualStyleBackColor = true;
+            btnOk.Click += btnOk_Click;
             // 
             // btnCancel
             // 
-            this.btnCancel.DialogResult = System.Windows.Forms.DialogResult.Cancel;
-            this.btnCancel.Location = new System.Drawing.Point(456, 560);
-            this.btnCancel.Name = "btnCancel";
-            this.btnCancel.Size = new System.Drawing.Size(94, 30);
-            this.btnCancel.TabIndex = 15;
-            this.btnCancel.Text = "Cancelar";
-            this.btnCancel.UseVisualStyleBackColor = true;
+            btnCancel.DialogResult = DialogResult.Cancel;
+            btnCancel.Location = new Point(397, 466);
+            btnCancel.Margin = new Padding(3, 2, 3, 2);
+            btnCancel.Name = "btnCancel";
+            btnCancel.Size = new Size(82, 22);
+            btnCancel.TabIndex = 15;
+            btnCancel.Text = "Cancelar";
+            btnCancel.UseVisualStyleBackColor = true;
             // 
             // groupBox1
             // 
-            this.groupBox1.Controls.Add(this.txtPreview);
-            this.groupBox1.Location = new System.Drawing.Point(20, 360);
-            this.groupBox1.Name = "groupBox1";
-            this.groupBox1.Size = new System.Drawing.Size(530, 190);
-            this.groupBox1.TabIndex = 16;
-            this.groupBox1.TabStop = false;
-            this.groupBox1.Text = "Visualização (Preview em Tempo Real)";
+            groupBox1.Controls.Add(txtPreview);
+            groupBox1.Location = new Point(18, 270);
+            groupBox1.Margin = new Padding(3, 2, 3, 2);
+            groupBox1.Name = "groupBox1";
+            groupBox1.Padding = new Padding(3, 2, 3, 2);
+            groupBox1.Size = new Size(464, 192);
+            groupBox1.TabIndex = 16;
+            groupBox1.TabStop = false;
+            groupBox1.Text = "Visualização (Preview em Tempo Real)";
             // 
             // txtPreview
             // 
-            this.txtPreview.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.txtPreview.Font = new System.Drawing.Font("Consolas", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
-            this.txtPreview.Location = new System.Drawing.Point(3, 23);
-            this.txtPreview.Multiline = true;
-            this.txtPreview.Name = "txtPreview";
-            this.txtPreview.ReadOnly = true;
-            this.txtPreview.ScrollBars = System.Windows.Forms.ScrollBars.Both;
-            this.txtPreview.Size = new System.Drawing.Size(524, 194);
-            this.txtPreview.TabIndex = 0;
-            this.txtPreview.WordWrap = false;
+            txtPreview.Dock = DockStyle.Fill;
+            txtPreview.Font = new Font("Consolas", 9F);
+            txtPreview.Location = new Point(3, 18);
+            txtPreview.Margin = new Padding(3, 2, 3, 2);
+            txtPreview.Multiline = true;
+            txtPreview.Name = "txtPreview";
+            txtPreview.ReadOnly = true;
+            txtPreview.ScrollBars = ScrollBars.Both;
+            txtPreview.Size = new Size(458, 172);
+            txtPreview.TabIndex = 0;
+            txtPreview.WordWrap = false;
             // 
             // btnPaste
             // 
-            this.btnPaste = new System.Windows.Forms.Button();
-            this.btnPaste.Location = new System.Drawing.Point(400, 320);
-            this.btnPaste.Name = "btnPaste";
-            this.btnPaste.Size = new System.Drawing.Size(150, 30);
-            this.btnPaste.TabIndex = 18;
-            this.btnPaste.Text = "Colar TNS";
-            this.btnPaste.UseVisualStyleBackColor = true;
-            this.btnPaste.Click += new System.EventHandler(this.btnPaste_Click);
+            btnPaste.Location = new Point(350, 240);
+            btnPaste.Margin = new Padding(3, 2, 3, 2);
+            btnPaste.Name = "btnPaste";
+            btnPaste.Size = new Size(131, 22);
+            btnPaste.TabIndex = 18;
+            btnPaste.Text = "Colar TNS";
+            btnPaste.UseVisualStyleBackColor = true;
+            btnPaste.Click += btnPaste_Click;
             // 
             // EditEntryForm
             // 
-            this.AcceptButton = this.btnOk;
-            this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 20F);
-            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.CancelButton = this.btnCancel;
-            this.ClientSize = new System.Drawing.Size(574, 600);
-            this.Controls.Add(this.btnPaste);
-            this.Controls.Add(this.groupBox1);
-            this.Controls.Add(this.btnCancel);
-            this.Controls.Add(this.btnOk);
-            this.Controls.Add(this.txtServer);
-            this.Controls.Add(this.label7);
-            this.Controls.Add(this.cmbProtocol);
-            this.Controls.Add(this.label6);
-            this.Controls.Add(this.txtSid);
-            this.Controls.Add(this.label5);
-            this.Controls.Add(this.txtServiceName);
-            this.Controls.Add(this.label4);
-            this.Controls.Add(this.txtPort);
-            this.Controls.Add(this.label3);
-            this.Controls.Add(this.txtHost);
-            this.Controls.Add(this.label2);
-            this.Controls.Add(this.txtName);
-            this.Controls.Add(this.label1);
-            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog;
-            this.MaximizeBox = false;
-            this.MinimizeBox = false;
-            this.Name = "EditEntryForm";
-            this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
-            this.Text = "Editar Entrada TNS";
-            this.Load += new System.EventHandler(this.EditEntryForm_Load);
-            this.groupBox1.ResumeLayout(false);
-            this.groupBox1.PerformLayout();
-            this.ResumeLayout(false);
-            this.PerformLayout();
+            AcceptButton = btnOk;
+            AutoScaleDimensions = new SizeF(7F, 15F);
+            AutoScaleMode = AutoScaleMode.Font;
+            CancelButton = btnCancel;
+            ClientSize = new Size(502, 507);
+            Controls.Add(btnPaste);
+            Controls.Add(groupBox1);
+            Controls.Add(btnCancel);
+            Controls.Add(btnOk);
+            Controls.Add(txtServer);
+            Controls.Add(label7);
+            Controls.Add(cmbProtocol);
+            Controls.Add(label6);
+            Controls.Add(txtSid);
+            Controls.Add(label5);
+            Controls.Add(txtServiceName);
+            Controls.Add(label4);
+            Controls.Add(txtPort);
+            Controls.Add(label3);
+            Controls.Add(txtHost);
+            Controls.Add(label2);
+            Controls.Add(txtName);
+            Controls.Add(label1);
+            FormBorderStyle = FormBorderStyle.FixedDialog;
+            Margin = new Padding(3, 2, 3, 2);
+            MaximizeBox = false;
+            MinimizeBox = false;
+            Name = "EditEntryForm";
+            StartPosition = FormStartPosition.CenterParent;
+            Text = "Editar Entrada TNS";
+            Load += EditEntryForm_Load;
+            groupBox1.ResumeLayout(false);
+            groupBox1.PerformLayout();
+            ResumeLayout(false);
+            PerformLayout();
         }
 
         #endregion
