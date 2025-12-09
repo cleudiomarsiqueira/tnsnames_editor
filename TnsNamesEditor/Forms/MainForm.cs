@@ -1,8 +1,11 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using TnsNamesEditor.Models;
 using TnsNamesEditor.Services;
 
@@ -16,6 +19,7 @@ namespace TnsNamesEditor.Forms
         private readonly List<string> defaultTnsPaths;
         private string? lastSortColumn = null;
         private SortOrder lastSortOrder = SortOrder.None;
+        private CancellationTokenSource? pingCancellation;
 
         public MainForm()
         {
@@ -23,6 +27,8 @@ namespace TnsNamesEditor.Forms
             defaultTnsPaths = BuildDefaultTnsPathList();
             AttachContextMenuHandlers();
             dataGridView1.SelectionChanged += DataGridView1_SelectionChanged;
+            dataGridView1.CellFormatting += DataGridView1_CellFormatting;
+            dataGridView1.RowPrePaint += DataGridView1_RowPrePaint;
             LoadIcon();
             UpdateFilePathLabel(string.Empty);
             UpdateAvailableActions();
@@ -150,6 +156,8 @@ namespace TnsNamesEditor.Forms
         {
             try
             {
+                CancelPendingPingRequests();
+
                 var parsedEntries = TnsNamesParser.ParseFile(filePath)
                     .OrderBy(e => e.Name)
                     .ToList();
@@ -164,9 +172,12 @@ namespace TnsNamesEditor.Forms
                 currentFilePath = filePath;
                 filteredEntries.Clear();
 
+                InitializeConnectionStatus(entries);
+
                 RebindGridAfterDataChange();
                 UpdateStatus(statusOverride ?? $"Arquivo carregado com sucesso: {entries.Count} entrada(s)");
                 UpdateFilePathLabel(filePath);
+                StartConnectionStatusRefresh(entries);
             }
             catch (Exception ex)
             {
@@ -176,6 +187,7 @@ namespace TnsNamesEditor.Forms
 
         private void ApplyEmptyFileState(string filePath, string? statusOverride)
         {
+            CancelPendingPingRequests();
             entries.Clear();
             filteredEntries.Clear();
             currentFilePath = filePath;
@@ -246,6 +258,14 @@ namespace TnsNamesEditor.Forms
             {
                 dataGridView1.Columns["Server"].HeaderText = "Servidor ⇅";
                 dataGridView1.Columns["Server"].SortMode = DataGridViewColumnSortMode.Programmatic;
+            }
+            if (dataGridView1.Columns["ConnectionStatus"] != null)
+            {
+                var statusColumn = dataGridView1.Columns["ConnectionStatus"];
+                statusColumn.HeaderText = "Status";
+                statusColumn.SortMode = DataGridViewColumnSortMode.NotSortable;
+                statusColumn.ReadOnly = true;
+                statusColumn.AutoSizeMode = DataGridViewAutoSizeColumnMode.AllCells;
             }
             
             // Restaura o ícone de ordenação se houver
@@ -357,7 +377,26 @@ namespace TnsNamesEditor.Forms
                 try
                 {
                     TnsNamesParser.SaveToFile(currentFilePath, entries);
-                    LoadFile(currentFilePath, statusMessage);
+                    SqlIniUpdateResult sqlIniResult = default;
+                    bool hasSqlIniResult = false;
+
+                    try
+                    {
+                        sqlIniResult = SqlIniUpdater.UpdateRemoteDbNames(entries);
+                        hasSqlIniResult = true;
+                    }
+                    catch (Exception sqlEx)
+                    {
+                        ShowError("Erro ao atualizar SQL.ini:", "Erro ao Atualizar SQL.ini", sqlEx);
+                    }
+
+                    string finalStatus = statusMessage;
+                    if (hasSqlIniResult)
+                    {
+                        finalStatus = $"{statusMessage} | {sqlIniResult.Message}";
+                    }
+
+                    LoadFile(currentFilePath, finalStatus);
                 }
                 catch (Exception ex)
                 {
@@ -395,7 +434,10 @@ namespace TnsNamesEditor.Forms
                 return;
             }
 
-            var entry = new TnsEntry();
+            var entry = new TnsEntry
+            {
+                ConnectionStatus = "Verificando..."
+            };
 
             using (var editForm = new EditEntryForm(entry, entries))
             {
@@ -470,7 +512,8 @@ namespace TnsNamesEditor.Forms
                 Sid = selectedEntry.Sid,
                 Protocol = selectedEntry.Protocol,
                 Server = selectedEntry.Server,
-                RawContent = selectedEntry.RawContent
+                RawContent = selectedEntry.RawContent,
+                ConnectionStatus = selectedEntry.ConnectionStatus
             };
 
             using (var editForm = new EditEntryForm(editedEntry, entries, originalName))
@@ -744,6 +787,66 @@ namespace TnsNamesEditor.Forms
             }
         }
 
+        private void DataGridView1_CellFormatting(object? sender, DataGridViewCellFormattingEventArgs e)
+        {
+            var column = dataGridView1.Columns?[e.ColumnIndex];
+            if (column == null || column.DataPropertyName != "ConnectionStatus")
+            {
+                return;
+            }
+
+            var cellStyle = e.CellStyle;
+            if (cellStyle == null)
+            {
+                return;
+            }
+
+            string status = e.Value?.ToString() ?? string.Empty;
+
+            if (status.Equals("Online", StringComparison.OrdinalIgnoreCase))
+            {
+                cellStyle.ForeColor = Color.Green;
+                cellStyle.BackColor = SystemColors.Window;
+            }
+            else if (status.Equals("Offline", StringComparison.OrdinalIgnoreCase))
+            {
+                cellStyle.ForeColor = Color.Red;
+                cellStyle.BackColor = Color.MistyRose;
+            }
+            else
+            {
+                cellStyle.ForeColor = SystemColors.ControlText;
+                cellStyle.BackColor = SystemColors.Window;
+            }
+        }
+
+        private void DataGridView1_RowPrePaint(object? sender, DataGridViewRowPrePaintEventArgs e)
+        {
+            if (e.RowIndex < 0 || e.RowIndex >= dataGridView1.Rows.Count)
+            {
+                return;
+            }
+
+            var row = dataGridView1.Rows[e.RowIndex];
+            if (row.DataBoundItem is not TnsEntry entry)
+            {
+                return;
+            }
+
+            bool isOffline = entry.ConnectionStatus?.Equals("Offline", StringComparison.OrdinalIgnoreCase) == true;
+
+            if (isOffline)
+            {
+                row.DefaultCellStyle.BackColor = Color.MistyRose;
+                row.DefaultCellStyle.SelectionBackColor = Color.LightCoral;
+            }
+            else
+            {
+                row.DefaultCellStyle.BackColor = dataGridView1.DefaultCellStyle.BackColor;
+                row.DefaultCellStyle.SelectionBackColor = dataGridView1.DefaultCellStyle.SelectionBackColor;
+            }
+        }
+
         private void dataGridView1_MouseDown(object sender, MouseEventArgs e)
         {
             // Seleciona a linha quando clicado com botão direito
@@ -882,6 +985,233 @@ namespace TnsNamesEditor.Forms
             var formattedText = selectedEntry.ToTnsFormat();
             Clipboard.SetText(formattedText);
             UpdateStatus($"Entrada '{selectedEntry.Name}' copiada para a área de transferência");
+        }
+
+        protected override void OnFormClosing(FormClosingEventArgs e)
+        {
+            CancelPendingPingRequests();
+            base.OnFormClosing(e);
+        }
+
+        private void CancelPendingPingRequests()
+        {
+            if (pingCancellation == null)
+            {
+                return;
+            }
+
+            try
+            {
+                pingCancellation.Cancel();
+            }
+            finally
+            {
+                pingCancellation.Dispose();
+                pingCancellation = null;
+            }
+        }
+
+        private void InitializeConnectionStatus(IEnumerable<TnsEntry> targetEntries)
+        {
+            foreach (var entry in targetEntries)
+            {
+                entry.ConnectionStatus = string.IsNullOrWhiteSpace(entry.Name)
+                    ? "Offline"
+                    : "Verificando...";
+            }
+        }
+
+        private void StartConnectionStatusRefresh(IEnumerable<TnsEntry> targetEntries)
+        {
+            var entriesToCheck = targetEntries
+                .Where(e => !string.IsNullOrWhiteSpace(e.Name))
+                .ToList();
+
+            if (entriesToCheck.Count == 0)
+            {
+                return;
+            }
+
+            CancelPendingPingRequests();
+            pingCancellation = new CancellationTokenSource();
+            var token = pingCancellation.Token;
+
+            _ = Task.Run(() => UpdateConnectionStatusesAsync(entriesToCheck, token), token);
+        }
+
+        private async Task UpdateConnectionStatusesAsync(IReadOnlyList<TnsEntry> entriesToCheck, CancellationToken token)
+        {
+            if (entriesToCheck.Count == 0)
+            {
+                return;
+            }
+
+            int maxDegreeOfParallelism = Math.Max(1, Environment.ProcessorCount);
+
+            using var semaphore = new SemaphoreSlim(maxDegreeOfParallelism, maxDegreeOfParallelism);
+            var tasks = new List<Task>();
+
+            foreach (var entry in entriesToCheck)
+            {
+                if (token.IsCancellationRequested)
+                {
+                    break;
+                }
+
+                tasks.Add(Task.Run(async () =>
+                {
+                    bool lockTaken = false;
+
+                    try
+                    {
+                        await semaphore.WaitAsync(token).ConfigureAwait(false);
+                        lockTaken = true;
+
+                        var status = await CheckConnectionStatusSafelyAsync(entry, token).ConfigureAwait(false);
+
+                        if (token.IsCancellationRequested)
+                        {
+                            return;
+                        }
+
+                        try
+                        {
+                            BeginInvoke(new Action(() =>
+                            {
+                                if (token.IsCancellationRequested)
+                                {
+                                    return;
+                                }
+
+                                entry.ConnectionStatus = status;
+                                dataGridView1.Refresh();
+                            }));
+                        }
+                        catch (InvalidOperationException)
+                        {
+                            // Form disposed
+                        }
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        // Cancelamento solicitado, apenas encerra
+                    }
+                    finally
+                    {
+                        if (lockTaken)
+                        {
+                            semaphore.Release();
+                        }
+                    }
+                }, token));
+            }
+
+            try
+            {
+                await Task.WhenAll(tasks).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                // Cancelamento já tratado individualmente
+            }
+        }
+
+        private async Task<string> CheckConnectionStatusSafelyAsync(TnsEntry entry, CancellationToken token)
+        {
+            try
+            {
+                return await CheckConnectionStatusAsync(entry.Name, token).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch
+            {
+                return "Offline";
+            }
+        }
+
+        private async Task<string> CheckConnectionStatusAsync(string alias, CancellationToken token)
+        {
+            if (string.IsNullOrWhiteSpace(alias))
+            {
+                return "Offline";
+            }
+
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = "tnsping",
+                Arguments = alias,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+
+            try
+            {
+                using var process = new Process { StartInfo = startInfo };
+
+                if (!process.Start())
+                {
+                    return "Offline";
+                }
+
+                var outputTask = process.StandardOutput.ReadToEndAsync();
+                var errorTask = process.StandardError.ReadToEndAsync();
+
+                using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(token);
+                timeoutCts.CancelAfter(TimeSpan.FromSeconds(5));
+
+                try
+                {
+                    await process.WaitForExitAsync(timeoutCts.Token).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException)
+                {
+                    try
+                    {
+                        if (!process.HasExited)
+                        {
+                            process.Kill(true);
+                        }
+                    }
+                    catch
+                    {
+                        // Ignora falhas ao finalizar o processo
+                    }
+
+                    if (token.IsCancellationRequested)
+                    {
+                        throw;
+                    }
+
+                    return "Offline";
+                }
+
+                var output = await outputTask.ConfigureAwait(false);
+                var error = await errorTask.ConfigureAwait(false);
+
+                if (process.ExitCode == 0 && output.IndexOf("OK", StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    return "Online";
+                }
+
+                return "Offline";
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Win32Exception)
+            {
+                return "Offline";
+            }
+            catch
+            {
+                return "Offline";
+            }
         }
     }
 }

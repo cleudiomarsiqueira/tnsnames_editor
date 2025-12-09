@@ -13,6 +13,7 @@ namespace TnsNamesEditor.Models
         public string Protocol { get; set; } = string.Empty;
         public string Server { get; set; } = string.Empty;
         public string RawContent { get; set; } = string.Empty;
+        public string ConnectionStatus { get; set; } = string.Empty;
 
         // Verifica se duas entradas são idênticas (comparando todos os campos relevantes)
         public bool IsIdenticalTo(TnsEntry other)
