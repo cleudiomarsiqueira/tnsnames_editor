@@ -692,6 +692,16 @@ namespace TnsNamesEditor.Forms
                 .Select(row => (TnsEntry)row.DataBoundItem)
                 .ToList();
 
+            // Confirma a exclusão
+            string confirmMessage = selectedEntries.Count == 1
+                ? $"Deseja realmente excluir a entrada '{selectedEntries[0].Name}'?"
+                : $"Deseja realmente excluir {selectedEntries.Count} entradas selecionadas?";
+
+            if (!ShowConfirmation(confirmMessage, "Confirmar Exclusão"))
+            {
+                return;
+            }
+
             foreach (var entry in selectedEntries)
             {
                 entries.Remove(entry);
