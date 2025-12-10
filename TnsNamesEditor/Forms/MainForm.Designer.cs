@@ -41,6 +41,8 @@ namespace TnsNamesEditor.Forms
             btnRefresh = new ToolStripButton();
             btnCheckAll = new ToolStripButton();
             btnEdit = new ToolStripButton();
+            progressBarPanel = new Panel();
+            progressBar = new ProgressBar();
             searchPanel = new Panel();
             txtSearch = new TextBox();
             filterPanel = new Panel();
@@ -55,6 +57,7 @@ namespace TnsNamesEditor.Forms
             saveFileDialog1 = new SaveFileDialog();
             contextMenuStrip1.SuspendLayout();
             toolStrip1.SuspendLayout();
+            progressBarPanel.SuspendLayout();
             searchPanel.SuspendLayout();
             filterPanel.SuspendLayout();
             statusStrip1.SuspendLayout();
@@ -167,12 +170,35 @@ namespace TnsNamesEditor.Forms
             btnEdit.Text = "Editar (Enter)";
             btnEdit.Click += btnEdit_Click;
             // 
+            // progressBarPanel
+            // 
+            progressBarPanel.BackColor = SystemColors.Control;
+            progressBarPanel.Controls.Add(progressBar);
+            progressBarPanel.Dock = DockStyle.Top;
+            progressBarPanel.Location = new Point(0, 50);
+            progressBarPanel.Margin = new Padding(0);
+            progressBarPanel.Name = "progressBarPanel";
+            progressBarPanel.Padding = new Padding(9, 0, 9, 2);
+            progressBarPanel.Size = new Size(1050, 8);
+            progressBarPanel.TabIndex = 10;
+            progressBarPanel.Visible = false;
+            // 
+            // progressBar
+            // 
+            progressBar.Dock = DockStyle.Fill;
+            progressBar.Location = new Point(9, 0);
+            progressBar.Margin = new Padding(0);
+            progressBar.Name = "progressBar";
+            progressBar.Size = new Size(1032, 6);
+            progressBar.Style = ProgressBarStyle.Continuous;
+            progressBar.TabIndex = 0;
+            // 
             // searchPanel
             // 
             searchPanel.BackColor = SystemColors.Control;
             searchPanel.Controls.Add(txtSearch);
             searchPanel.Dock = DockStyle.Top;
-            searchPanel.Location = new Point(0, 50);
+            searchPanel.Location = new Point(0, 58);
             searchPanel.Margin = new Padding(3, 2, 3, 2);
             searchPanel.Name = "searchPanel";
             searchPanel.Padding = new Padding(9, 8, 9, 8);
@@ -198,7 +224,7 @@ namespace TnsNamesEditor.Forms
             filterPanel.Controls.Add(radioOnline);
             filterPanel.Controls.Add(radioOffline);
             filterPanel.Dock = DockStyle.Top;
-            filterPanel.Location = new Point(0, 84);
+            filterPanel.Location = new Point(0, 92);
             filterPanel.Name = "filterPanel";
             filterPanel.Padding = new Padding(9, 4, 9, 4);
             filterPanel.Size = new Size(1050, 30);
@@ -269,13 +295,13 @@ namespace TnsNamesEditor.Forms
             dataGridView1.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             dataGridView1.ContextMenuStrip = contextMenuStrip1;
             dataGridView1.Dock = DockStyle.Fill;
-            dataGridView1.Location = new Point(0, 114);
+            dataGridView1.Location = new Point(0, 122);
             dataGridView1.Margin = new Padding(3, 2, 3, 2);
             dataGridView1.Name = "dataGridView1";
             dataGridView1.ReadOnly = true;
             dataGridView1.RowHeadersWidth = 51;
             dataGridView1.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
-            dataGridView1.Size = new Size(1050, 389);
+            dataGridView1.Size = new Size(1050, 403);
             dataGridView1.TabIndex = 2;
             dataGridView1.CellDoubleClick += dataGridView1_CellDoubleClick;
             dataGridView1.ColumnHeaderMouseClick += dataGridView1_ColumnHeaderMouseClick;
@@ -293,9 +319,10 @@ namespace TnsNamesEditor.Forms
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(1050, 525);
             Controls.Add(dataGridView1);
+            Controls.Add(statusStrip1);
             Controls.Add(filterPanel);
             Controls.Add(searchPanel);
-            Controls.Add(statusStrip1);
+            Controls.Add(progressBarPanel);
             Controls.Add(toolStrip1);
             FormBorderStyle = FormBorderStyle.FixedSingle;
             KeyPreview = true;
@@ -308,6 +335,7 @@ namespace TnsNamesEditor.Forms
             contextMenuStrip1.ResumeLayout(false);
             toolStrip1.ResumeLayout(false);
             toolStrip1.PerformLayout();
+            progressBarPanel.ResumeLayout(false);
             searchPanel.ResumeLayout(false);
             searchPanel.PerformLayout();
             filterPanel.ResumeLayout(false);
@@ -316,7 +344,6 @@ namespace TnsNamesEditor.Forms
             statusStrip1.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)dataGridView1).EndInit();
             ResumeLayout(false);
-            PerformLayout();
         }
 
         #endregion
@@ -329,6 +356,8 @@ namespace TnsNamesEditor.Forms
         private ToolStripButton btnDelete;
         private ToolStripButton btnRefresh;
         private ToolStripButton btnCheckAll;
+        private Panel progressBarPanel;
+        private ProgressBar progressBar;
         private Panel searchPanel;
         private TextBox txtSearch;
         private Panel filterPanel;

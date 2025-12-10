@@ -11,11 +11,13 @@ namespace TnsNamesEditor.Services
         private CancellationTokenSource? cancellationTokenSource;
         private readonly int maxParallelChecks;
         private readonly Action? onStatusUpdated;
+        private readonly Action<int, int>? onProgressChanged;
 
-        public ConnectionStatusService(int maxParallelChecks = 5, Action? onStatusUpdated = null)
+        public ConnectionStatusService(int maxParallelChecks = 5, Action? onStatusUpdated = null, Action<int, int>? onProgressChanged = null)
         {
             this.maxParallelChecks = maxParallelChecks;
             this.onStatusUpdated = onStatusUpdated;
+            this.onProgressChanged = onProgressChanged;
         }
 
         public void InitializeConnectionStatus(IEnumerable<TnsEntry> entries)
@@ -76,10 +78,13 @@ namespace TnsNamesEditor.Services
                 return;
             }
 
-            // Marca como "Verificando..." apenas as entradas que realmente serão verificadas
+            // Notifica início do progresso
+            onProgressChanged?.Invoke(0, entriesToCheck.Count);
+
+            // Marca como "Aguardando..." todas as entradas que serão verificadas
             foreach (var entry in entriesToCheck)
             {
-                entry.ConnectionStatus = "Verificando...";
+                entry.ConnectionStatus = "Aguardando...";
             }
             onStatusUpdated?.Invoke();
 
@@ -87,7 +92,7 @@ namespace TnsNamesEditor.Services
             cancellationTokenSource = new CancellationTokenSource();
             var token = cancellationTokenSource.Token;
 
-            await Task.Run(() => UpdateConnectionStatusesAsync(entriesToCheck, token, onEntryStatusChanged), token);
+            await Task.Run(() => UpdateConnectionStatusesAsync(entriesToCheck, token, onEntryStatusChanged, entriesToCheck.Count), token);
         }
 
         public void CancelPendingChecks()
@@ -110,12 +115,15 @@ namespace TnsNamesEditor.Services
             cancellationTokenSource = null;
         }
 
-        private async Task UpdateConnectionStatusesAsync(IReadOnlyList<TnsEntry> entriesToCheck, CancellationToken token, Action<TnsEntry, string>? onEntryStatusChanged)
+        private async Task UpdateConnectionStatusesAsync(IReadOnlyList<TnsEntry> entriesToCheck, CancellationToken token, Action<TnsEntry, string>? onEntryStatusChanged, int totalEntries)
         {
             if (entriesToCheck.Count == 0)
             {
                 return;
             }
+
+            int completedCount = 0;
+            var progressLock = new object();
 
             using var semaphore = new SemaphoreSlim(maxParallelChecks, maxParallelChecks);
             var tasks = new List<Task>();
@@ -136,6 +144,10 @@ namespace TnsNamesEditor.Services
                         await semaphore.WaitAsync(token).ConfigureAwait(false);
                         lockTaken = true;
 
+                        // Marca como "Verificando..." apenas quando realmente começar a verificar
+                        entry.ConnectionStatus = "Verificando...";
+                        onStatusUpdated?.Invoke();
+
                         var status = await CheckConnectionStatusSafelyAsync(entry, token).ConfigureAwait(false);
 
                         if (token.IsCancellationRequested)
@@ -149,6 +161,13 @@ namespace TnsNamesEditor.Services
 
                         onEntryStatusChanged?.Invoke(entry, status);
                         onStatusUpdated?.Invoke();
+
+                        // Atualiza progresso
+                        lock (progressLock)
+                        {
+                            completedCount++;
+                            onProgressChanged?.Invoke(completedCount, totalEntries);
+                        }
                     }
                     catch (OperationCanceledException)
                     {

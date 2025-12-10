@@ -25,17 +25,55 @@ namespace TnsNamesEditor.Forms
         public MainForm()
         {
             InitializeComponent();
-            connectionStatusService = new ConnectionStatusService(5, () => 
-            {
-                try
+            connectionStatusService = new ConnectionStatusService(
+                maxParallelChecks: 5, 
+                onStatusUpdated: () => 
                 {
-                    dataGridView1?.Invoke(new Action(() => dataGridView1.Refresh()));
-                }
-                catch (InvalidOperationException)
+                    try
+                    {
+                        dataGridView1?.Invoke(new Action(() => dataGridView1.Refresh()));
+                    }
+                    catch (InvalidOperationException)
+                    {
+                        // Form disposed
+                    }
+                },
+                onProgressChanged: (completed, total) =>
                 {
-                    // Form disposed
-                }
-            });
+                    try
+                    {
+                        this.Invoke(new Action(() =>
+                        {
+                            if (total > 0)
+                            {
+                                progressBarPanel.Visible = true;
+                                progressBar.Maximum = total;
+                                progressBar.Value = Math.Min(completed, total);
+                                
+                                if (completed >= total)
+                                {
+                                    // Esconde a barra após um pequeno delay para mostrar 100%
+                                    Task.Delay(500).ContinueWith(_ =>
+                                    {
+                                        try
+                                        {
+                                            this.Invoke(new Action(() => progressBarPanel.Visible = false));
+                                        }
+                                        catch { }
+                                    });
+                                }
+                            }
+                            else
+                            {
+                                progressBarPanel.Visible = false;
+                            }
+                        }));
+                    }
+                    catch (InvalidOperationException)
+                    {
+                        // Form disposed
+                    }
+                });
             defaultTnsPaths = BuildDefaultTnsPathList();
             AttachContextMenuHandlers();
             dataGridView1.SelectionChanged += DataGridView1_SelectionChanged;
