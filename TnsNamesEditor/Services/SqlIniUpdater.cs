@@ -6,15 +6,20 @@ using TnsNamesEditor.Models;
 
 namespace TnsNamesEditor.Services
 {
-    public static class SqlIniUpdater
+    public class SqlIniUpdater
     {
-        private static readonly string SqlIniPath = @"C:\\C5Client\\SQL.ini";
+        private readonly string sqlIniPath;
 
-        public static SqlIniUpdateResult UpdateRemoteDbNames(IEnumerable<TnsEntry> tnsEntries)
+        public SqlIniUpdater(string? customPath = null)
         {
-            if (!File.Exists(SqlIniPath))
+            sqlIniPath = customPath ?? @"C:\C5Client\SQL.ini";
+        }
+
+        public SqlIniUpdateResult UpdateRemoteDbNames(IEnumerable<TnsEntry> tnsEntries)
+        {
+            if (!File.Exists(sqlIniPath))
             {
-                return SqlIniUpdateResult.NotFound(SqlIniPath);
+                return SqlIniUpdateResult.NotFound(sqlIniPath);
             }
 
             var distinctNames = tnsEntries
@@ -24,14 +29,14 @@ namespace TnsNamesEditor.Services
                 .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
                 .ToList();
 
-            var lines = ReadAllLinesPreservingEncoding(SqlIniPath, out var encoding);
+            var lines = ReadAllLinesPreservingEncoding(sqlIniPath, out var encoding);
             int sectionStart = FindOraGtwySectionStart(lines);
 
             if (sectionStart < 0)
             {
                 AppendNewSection(lines, distinctNames);
-                WriteAllLinesPreservingEncoding(SqlIniPath, lines, encoding);
-                return SqlIniUpdateResult.Updated(SqlIniPath, distinctNames.Count);
+                WriteAllLinesPreservingEncoding(sqlIniPath, lines, encoding);
+                return SqlIniUpdateResult.Updated(sqlIniPath, distinctNames.Count);
             }
 
             int sectionEnd = FindSectionEnd(lines, sectionStart);
@@ -53,8 +58,8 @@ namespace TnsNamesEditor.Services
 
             updatedLines.AddRange(lines.Skip(sectionEnd));
 
-            WriteAllLinesPreservingEncoding(SqlIniPath, updatedLines, encoding);
-            return SqlIniUpdateResult.Updated(SqlIniPath, distinctNames.Count);
+            WriteAllLinesPreservingEncoding(sqlIniPath, updatedLines, encoding);
+            return SqlIniUpdateResult.Updated(sqlIniPath, distinctNames.Count);
         }
 
         private static int FindOraGtwySectionStart(IReadOnlyList<string> lines)

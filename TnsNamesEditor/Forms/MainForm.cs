@@ -20,6 +20,7 @@ namespace TnsNamesEditor.Forms
         private string? lastSortColumn = null;
         private SortOrder lastSortOrder = SortOrder.None;
         private readonly ConnectionStatusService connectionStatusService;
+        private readonly SqlIniUpdater sqlIniUpdater;
         private string currentStatusFilter = "Todos";
 
         public MainForm()
@@ -74,6 +75,7 @@ namespace TnsNamesEditor.Forms
                         // Form disposed
                     }
                 });
+            sqlIniUpdater = new SqlIniUpdater();
             defaultTnsPaths = BuildDefaultTnsPathList();
             AttachContextMenuHandlers();
             dataGridView1.SelectionChanged += DataGridView1_SelectionChanged;
@@ -454,7 +456,7 @@ namespace TnsNamesEditor.Forms
 
                     try
                     {
-                        sqlIniResult = SqlIniUpdater.UpdateRemoteDbNames(entries);
+                        sqlIniResult = sqlIniUpdater.UpdateRemoteDbNames(entries);
                         hasSqlIniResult = true;
                     }
                     catch (Exception sqlEx)
@@ -645,7 +647,7 @@ namespace TnsNamesEditor.Forms
 
                         try
                         {
-                            sqlIniResult = SqlIniUpdater.UpdateRemoteDbNames(entries);
+                            sqlIniResult = sqlIniUpdater.UpdateRemoteDbNames(entries);
                             hasSqlIniResult = true;
                         }
                         catch (Exception sqlEx)
