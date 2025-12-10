@@ -151,7 +151,6 @@ namespace TnsNamesEditor.Models
                 entry.Server = ExtractValue(entryText, "SERVER");
                 
                 entries.Add(entry);
-                entries.Add(entry);
             }
 
             return entries;
@@ -169,6 +168,17 @@ namespace TnsNamesEditor.Models
             }
             
             return string.Empty;
+        }
+
+        public static TnsEntry? ReparseEntryFromFile(string filePath, string entryName)
+        {
+            if (!File.Exists(filePath) || string.IsNullOrWhiteSpace(entryName))
+            {
+                return null;
+            }
+
+            var allEntries = ParseFile(filePath);
+            return allEntries.FirstOrDefault(e => e.Name.Equals(entryName, StringComparison.OrdinalIgnoreCase));
         }
 
         public static void SaveToFile(string filePath, List<TnsEntry> entries)

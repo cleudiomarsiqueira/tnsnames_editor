@@ -19,14 +19,23 @@ namespace TnsNamesEditor.Forms
         private readonly List<string> defaultTnsPaths;
         private string? lastSortColumn = null;
         private SortOrder lastSortOrder = SortOrder.None;
-        private CancellationTokenSource? pingCancellation;
-        private readonly Dictionary<string, string> statusCache = new(StringComparer.OrdinalIgnoreCase);
-        private readonly HashSet<string> pendingStatusRefresh = new(StringComparer.OrdinalIgnoreCase);
+        private readonly ConnectionStatusService connectionStatusService;
         private string currentStatusFilter = "Todos";
 
         public MainForm()
         {
             InitializeComponent();
+            connectionStatusService = new ConnectionStatusService(5, () => 
+            {
+                try
+                {
+                    dataGridView1?.Invoke(new Action(() => dataGridView1.Refresh()));
+                }
+                catch (InvalidOperationException)
+                {
+                    // Form disposed
+                }
+            });
             defaultTnsPaths = BuildDefaultTnsPathList();
             AttachContextMenuHandlers();
             dataGridView1.SelectionChanged += DataGridView1_SelectionChanged;
@@ -162,7 +171,7 @@ namespace TnsNamesEditor.Forms
         {
             try
             {
-                CancelPendingPingRequests();
+                connectionStatusService.CancelPendingChecks();
 
                 var parsedEntries = TnsNamesParser.ParseFile(filePath)
                     .OrderBy(e => e.Name)
@@ -183,11 +192,11 @@ namespace TnsNamesEditor.Forms
                 UpdateFilePathLabel(filePath);
                 if (statusOverride == null)
                 {
-                    pendingStatusRefresh.Clear();
+                    connectionStatusService.ClearCache();
                 }
 
-                InitializeConnectionStatus(entries);
-                StartConnectionStatusRefresh(entries, forceRefresh: statusOverride == null);
+                connectionStatusService.InitializeConnectionStatus(entries);
+                _ = connectionStatusService.StartConnectionStatusRefreshAsync(entries, forceRefresh: statusOverride == null);
             }
             catch (Exception ex)
             {
@@ -197,12 +206,11 @@ namespace TnsNamesEditor.Forms
 
         private void ApplyEmptyFileState(string filePath, string? statusOverride)
         {
-            CancelPendingPingRequests();
+            connectionStatusService.CancelPendingChecks();
             entries.Clear();
             filteredEntries.Clear();
             currentFilePath = filePath;
-            statusCache.Clear();
-            pendingStatusRefresh.Clear();
+            connectionStatusService.ClearCache();
 
             RebindGridAfterDataChange();
             UpdateFilePathLabel(filePath);
@@ -449,10 +457,7 @@ namespace TnsNamesEditor.Forms
                 return;
             }
 
-            var entry = new TnsEntry
-            {
-                ConnectionStatus = "Verificando..."
-            };
+            var entry = new TnsEntry();
 
             using (var editForm = new EditEntryForm(entry, entries))
             {
@@ -479,8 +484,7 @@ namespace TnsNamesEditor.Forms
                             "Nome Duplicado"))
                         {
                             entries.Remove(sameNameEntry);
-                            entry.ConnectionStatus = "Verificando...";
-                            MarkEntryForStatusRefresh(entry.Name);
+                            connectionStatusService.MarkEntryForStatusRefresh(entry.Name);
                             entries.Add(entry);
                             RebindGridAfterDataChange();
                             SaveChanges($"Entrada '{entry.Name}' substituída e salva");
@@ -490,7 +494,7 @@ namespace TnsNamesEditor.Forms
                     
                     // Entrada nova, adiciona normalmente
                     entries.Add(entry);
-                    MarkEntryForStatusRefresh(entry.Name);
+                    connectionStatusService.MarkEntryForStatusRefresh(entry.Name);
                     RebindGridAfterDataChange();
                     SaveChanges($"Entrada '{entry.Name}' adicionada e salva");
                 }
@@ -567,21 +571,56 @@ namespace TnsNamesEditor.Forms
                     // Remove a entrada original e adiciona a editada na mesma posição
                     entries.RemoveAt(originalIndex);
                     entries.Insert(originalIndex, editedEntry);
-                    editedEntry.ConnectionStatus = "Verificando...";
-                    MarkEntryForStatusRefresh(editedEntry.Name);
+                    connectionStatusService.MarkEntryForStatusRefresh(editedEntry.Name);
                     if (!originalName.Equals(editedEntry.Name, StringComparison.OrdinalIgnoreCase))
                     {
-                        statusCache.Remove(originalName);
-                        pendingStatusRefresh.Remove(originalName);
+                        connectionStatusService.ClearCache(originalName);
                     }
                     
-                    // Salva as alterações
-                    SaveChanges($"Entrada '{editedEntry.Name}' atualizada e salva");
+                    // Salva as alterações e re-parseia apenas a entrada editada
+                    try
+                    {
+                        TnsNamesParser.SaveToFile(currentFilePath, entries);
+                        
+                        // Re-parseia a entrada do arquivo para garantir consistência
+                        var reparsedEntry = TnsNamesParser.ReparseEntryFromFile(currentFilePath, editedEntry.Name);
+                        if (reparsedEntry != null)
+                        {
+                            // Preserva o status de conexão (será atualizado depois)
+                            entries[originalIndex] = reparsedEntry;
+                            editedEntry = reparsedEntry;
+                        }
+
+                        SqlIniUpdateResult sqlIniResult = default;
+                        bool hasSqlIniResult = false;
+
+                        try
+                        {
+                            sqlIniResult = SqlIniUpdater.UpdateRemoteDbNames(entries);
+                            hasSqlIniResult = true;
+                        }
+                        catch (Exception sqlEx)
+                        {
+                            ShowError("Erro ao atualizar SQL.ini:", "Erro ao Atualizar SQL.ini", sqlEx);
+                        }
+
+                        string finalStatus = $"Entrada '{editedEntry.Name}' atualizada e salva";
+                        if (hasSqlIniResult)
+                        {
+                            finalStatus = $"{finalStatus} | {sqlIniResult.Message}";
+                        }
+
+                        UpdateStatus(finalStatus);
+                    }
+                    catch (Exception ex)
+                    {
+                        ShowError("Erro ao salvar arquivo:", "Erro ao Salvar", ex);
+                        return;
+                    }
                     
-                    // Atualiza a grade sem recarregar do arquivo
+                    // Atualiza a grade e testa apenas esta entrada
                     RebindGridAfterDataChange();
-                    StartConnectionStatusRefresh(new[] { editedEntry }, forceRefresh: true);
-                    UpdateStatus($"Entrada '{editedEntry.Name}' atualizada com sucesso");
+                    _ = connectionStatusService.StartConnectionStatusRefreshAsync(new[] { editedEntry }, forceRefresh: true);
                 }
             }
         }
@@ -607,8 +646,7 @@ namespace TnsNamesEditor.Forms
             foreach (var entry in selectedEntries)
             {
                 entries.Remove(entry);
-                statusCache.Remove(entry.Name);
-                pendingStatusRefresh.Remove(entry.Name);
+                connectionStatusService.ClearCache(entry.Name);
                 
                 // Se houver filtro ativo, remove também da lista filtrada
                 if (filteredEntries.Any())
@@ -659,13 +697,11 @@ namespace TnsNamesEditor.Forms
                     continue;
                 }
 
-                pendingStatusRefresh.Add(entry.Name);
-                entry.ConnectionStatus = "Verificando...";
+                connectionStatusService.MarkEntryForStatusRefresh(entry.Name);
             }
 
-            dataGridView1.Refresh();
             UpdateStatus("Testando novamente todas as entradas...");
-            StartConnectionStatusRefresh(entries, forceRefresh: true);
+            _ = connectionStatusService.StartConnectionStatusRefreshAsync(entries, forceRefresh: true);
         }
 
         private void dataGridView1_CellDoubleClick(object sender, DataGridViewCellEventArgs e)
@@ -1103,258 +1139,9 @@ namespace TnsNamesEditor.Forms
 
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
-            CancelPendingPingRequests();
+            connectionStatusService.CancelPendingChecks();
+            connectionStatusService.Dispose();
             base.OnFormClosing(e);
-        }
-
-        private void CancelPendingPingRequests()
-        {
-            if (pingCancellation == null)
-            {
-                return;
-            }
-
-            try
-            {
-                pingCancellation.Cancel();
-            }
-            finally
-            {
-                pingCancellation.Dispose();
-                pingCancellation = null;
-            }
-        }
-
-        private void InitializeConnectionStatus(IEnumerable<TnsEntry> targetEntries)
-        {
-            foreach (var entry in targetEntries)
-            {
-                if (string.IsNullOrWhiteSpace(entry.Name))
-                {
-                    entry.ConnectionStatus = "Offline";
-                    continue;
-                }
-
-                if (pendingStatusRefresh.Contains(entry.Name))
-                {
-                    entry.ConnectionStatus = "Verificando...";
-                }
-                else if (statusCache.TryGetValue(entry.Name, out var cachedStatus))
-                {
-                    entry.ConnectionStatus = cachedStatus;
-                }
-                else
-                {
-                    entry.ConnectionStatus = "Verificando...";
-                }
-            }
-        }
-
-        private void StartConnectionStatusRefresh(IEnumerable<TnsEntry> targetEntries, bool forceRefresh)
-        {
-            var entriesToCheck = targetEntries
-                .Where(e => !string.IsNullOrWhiteSpace(e.Name))
-                .Where(e => forceRefresh || pendingStatusRefresh.Contains(e.Name) || !statusCache.ContainsKey(e.Name))
-                .ToList();
-
-            if (entriesToCheck.Count == 0)
-            {
-                return;
-            }
-
-            CancelPendingPingRequests();
-            pingCancellation = new CancellationTokenSource();
-            var token = pingCancellation.Token;
-
-            _ = Task.Run(() => UpdateConnectionStatusesAsync(entriesToCheck, token), token);
-        }
-
-        private void MarkEntryForStatusRefresh(string? name)
-        {
-            if (string.IsNullOrWhiteSpace(name))
-            {
-                return;
-            }
-
-            statusCache.Remove(name);
-            pendingStatusRefresh.Add(name);
-        }
-
-        private async Task UpdateConnectionStatusesAsync(IReadOnlyList<TnsEntry> entriesToCheck, CancellationToken token)
-        {
-            if (entriesToCheck.Count == 0)
-            {
-                return;
-            }
-
-            int maxDegreeOfParallelism = 3;
-
-            using var semaphore = new SemaphoreSlim(maxDegreeOfParallelism, maxDegreeOfParallelism);
-            var tasks = new List<Task>();
-
-            foreach (var entry in entriesToCheck)
-            {
-                if (token.IsCancellationRequested)
-                {
-                    break;
-                }
-
-                tasks.Add(Task.Run(async () =>
-                {
-                    bool lockTaken = false;
-
-                    try
-                    {
-                        await semaphore.WaitAsync(token).ConfigureAwait(false);
-                        lockTaken = true;
-
-                        var status = await CheckConnectionStatusSafelyAsync(entry, token).ConfigureAwait(false);
-
-                        if (token.IsCancellationRequested)
-                        {
-                            return;
-                        }
-
-                        try
-                        {
-                            BeginInvoke(new Action(() =>
-                            {
-                                if (token.IsCancellationRequested)
-                                {
-                                    return;
-                                }
-
-                                entry.ConnectionStatus = status;
-                                statusCache[entry.Name] = status;
-                                pendingStatusRefresh.Remove(entry.Name);
-                                dataGridView1.Refresh();
-                            }));
-                        }
-                        catch (InvalidOperationException)
-                        {
-                            // Form disposed
-                        }
-                    }
-                    catch (OperationCanceledException)
-                    {
-                        // Cancelamento solicitado, apenas encerra
-                    }
-                    finally
-                    {
-                        if (lockTaken)
-                        {
-                            semaphore.Release();
-                        }
-                    }
-                }, token));
-            }
-
-            try
-            {
-                await Task.WhenAll(tasks).ConfigureAwait(false);
-            }
-            catch (OperationCanceledException)
-            {
-                // Cancelamento já tratado individualmente
-            }
-        }
-
-        private async Task<string> CheckConnectionStatusSafelyAsync(TnsEntry entry, CancellationToken token)
-        {
-            try
-            {
-                return await CheckConnectionStatusAsync(entry.Name, token).ConfigureAwait(false);
-            }
-            catch (OperationCanceledException)
-            {
-                throw;
-            }
-            catch
-            {
-                return "Offline";
-            }
-        }
-
-        private async Task<string> CheckConnectionStatusAsync(string alias, CancellationToken token)
-        {
-            if (string.IsNullOrWhiteSpace(alias))
-            {
-                return "Offline";
-            }
-
-            var startInfo = new ProcessStartInfo
-            {
-                FileName = "tnsping",
-                Arguments = alias,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false,
-                CreateNoWindow = true
-            };
-
-            try
-            {
-                using var process = new Process { StartInfo = startInfo };
-
-                if (!process.Start())
-                {
-                    return "Offline";
-                }
-
-                var outputTask = process.StandardOutput.ReadToEndAsync();
-                var errorTask = process.StandardError.ReadToEndAsync();
-
-                using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(token);
-                timeoutCts.CancelAfter(TimeSpan.FromSeconds(5));
-
-                try
-                {
-                    await process.WaitForExitAsync(timeoutCts.Token).ConfigureAwait(false);
-                }
-                catch (OperationCanceledException)
-                {
-                    try
-                    {
-                        if (!process.HasExited)
-                        {
-                            process.Kill(true);
-                        }
-                    }
-                    catch
-                    {
-                        // Ignora falhas ao finalizar o processo
-                    }
-
-                    if (token.IsCancellationRequested)
-                    {
-                        throw;
-                    }
-
-                    return "Offline";
-                }
-
-                var output = await outputTask.ConfigureAwait(false);
-                await errorTask.ConfigureAwait(false);
-
-                if (process.ExitCode == 0 && output.IndexOf("OK", StringComparison.OrdinalIgnoreCase) >= 0)
-                {
-                    return "Online";
-                }
-
-                return "Offline";
-            }
-            catch (OperationCanceledException)
-            {
-                throw;
-            }
-            catch (Win32Exception)
-            {
-                return "Offline";
-            }
-            catch
-            {
-                return "Offline";
-            }
         }
     }
 }
