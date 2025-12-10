@@ -12,12 +12,18 @@ namespace TnsNamesEditor.Services
         private readonly int maxParallelChecks;
         private readonly Action? onStatusUpdated;
         private readonly Action<int, int>? onProgressChanged;
+        private readonly Action<double>? onIndividualProgressChanged;
 
-        public ConnectionStatusService(int maxParallelChecks = 5, Action? onStatusUpdated = null, Action<int, int>? onProgressChanged = null)
+        public ConnectionStatusService(
+            int maxParallelChecks = 5, 
+            Action? onStatusUpdated = null, 
+            Action<int, int>? onProgressChanged = null,
+            Action<double>? onIndividualProgressChanged = null)
         {
             this.maxParallelChecks = maxParallelChecks;
             this.onStatusUpdated = onStatusUpdated;
             this.onProgressChanged = onProgressChanged;
+            this.onIndividualProgressChanged = onIndividualProgressChanged;
         }
 
         public void InitializeConnectionStatus(IEnumerable<TnsEntry> entries)
@@ -123,6 +129,7 @@ namespace TnsNamesEditor.Services
             }
 
             int completedCount = 0;
+            var progressTracker = new ProgressTracker();
             var progressLock = new object();
 
             using var semaphore = new SemaphoreSlim(maxParallelChecks, maxParallelChecks);
@@ -148,7 +155,7 @@ namespace TnsNamesEditor.Services
                         entry.ConnectionStatus = "Verificando...";
                         onStatusUpdated?.Invoke();
 
-                        var status = await CheckConnectionStatusSafelyAsync(entry, token).ConfigureAwait(false);
+                        var status = await CheckConnectionStatusWithProgressAsync(entry, token, totalEntries, () => completedCount, progressLock, progressTracker).ConfigureAwait(false);
 
                         if (token.IsCancellationRequested)
                         {
@@ -166,7 +173,11 @@ namespace TnsNamesEditor.Services
                         lock (progressLock)
                         {
                             completedCount++;
-                            onProgressChanged?.Invoke(completedCount, totalEntries);
+                            if (completedCount > progressTracker.LastReported)
+                            {
+                                progressTracker.LastReported = completedCount;
+                                onProgressChanged?.Invoke(completedCount, totalEntries);
+                            }
                         }
                     }
                     catch (OperationCanceledException)
@@ -191,6 +202,84 @@ namespace TnsNamesEditor.Services
             {
                 // Cancelamento já tratado individualmente
             }
+        }
+
+        private async Task<string> CheckConnectionStatusWithProgressAsync(
+            TnsEntry entry, 
+            CancellationToken token, 
+            int totalEntries, 
+            Func<int> getCompletedCount, 
+            object progressLock,
+            ProgressTracker progressTracker)
+        {
+            const int timeoutSeconds = 5;
+            const int updateIntervalMs = 100;
+            var stopwatch = Stopwatch.StartNew();
+            var progressUpdateCancellation = new CancellationTokenSource();
+            var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(token, progressUpdateCancellation.Token);
+
+            // Task para simular progresso
+            var progressTask = Task.Run(async () =>
+            {
+                try
+                {
+                    while (!linkedCts.Token.IsCancellationRequested && stopwatch.Elapsed.TotalSeconds < timeoutSeconds)
+                    {
+                        await Task.Delay(updateIntervalMs, linkedCts.Token).ConfigureAwait(false);
+                        
+                        if (linkedCts.Token.IsCancellationRequested)
+                            break;
+
+                        // Calcula o progresso estimado desta verificação (0 a 0.99)
+                        double individualProgress = Math.Min(stopwatch.Elapsed.TotalSeconds / timeoutSeconds, 0.99);
+                        
+                        // Notifica com o progresso intermediário - garantindo que nunca volta
+                        lock (progressLock)
+                        {
+                            int baseCompleted = getCompletedCount();
+                            // Mostra progresso fracionário: completos + fração da atual
+                            int displayProgress = Math.Min(baseCompleted + 1, totalEntries);
+                            
+                            // Só atualiza se for maior que o último reportado
+                            if (displayProgress > progressTracker.LastReported)
+                            {
+                                progressTracker.LastReported = displayProgress;
+                                onProgressChanged?.Invoke(displayProgress, totalEntries);
+                            }
+                        }
+                    }
+                }
+                catch (OperationCanceledException)
+                {
+                    // Esperado
+                }
+            }, linkedCts.Token);
+
+            try
+            {
+                var result = await CheckConnectionStatusSafelyAsync(entry, token).ConfigureAwait(false);
+                return result;
+            }
+            finally
+            {
+                stopwatch.Stop();
+                progressUpdateCancellation.Cancel();
+                try
+                {
+                    await progressTask.ConfigureAwait(false);
+                }
+                catch (OperationCanceledException)
+                {
+                    // Esperado ao cancelar
+                }
+                progressUpdateCancellation.Dispose();
+                linkedCts.Dispose();
+            }
+        }
+
+        private class ProgressTracker
+        {
+            public int LastReported { get; set; }
         }
 
         private async Task<string> CheckConnectionStatusSafelyAsync(TnsEntry entry, CancellationToken token)
