@@ -6,6 +6,9 @@ namespace TnsNamesEditor.Services
 {
     public class ConnectionStatusService : IDisposable
     {
+        private const int ConnectionTimeoutSeconds = 5;
+        private const int ProgressUpdateIntervalMs = 100;
+        
         private readonly Dictionary<string, string> statusCache = new(StringComparer.OrdinalIgnoreCase);
         private readonly HashSet<string> pendingStatusRefresh = new(StringComparer.OrdinalIgnoreCase);
         private CancellationTokenSource? cancellationTokenSource;
@@ -212,8 +215,6 @@ namespace TnsNamesEditor.Services
             object progressLock,
             ProgressTracker progressTracker)
         {
-            const int timeoutSeconds = 5;
-            const int updateIntervalMs = 100;
             var stopwatch = Stopwatch.StartNew();
             var progressUpdateCancellation = new CancellationTokenSource();
             var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(token, progressUpdateCancellation.Token);
@@ -223,15 +224,15 @@ namespace TnsNamesEditor.Services
             {
                 try
                 {
-                    while (!linkedCts.Token.IsCancellationRequested && stopwatch.Elapsed.TotalSeconds < timeoutSeconds)
+                    while (!linkedCts.Token.IsCancellationRequested && stopwatch.Elapsed.TotalSeconds < ConnectionTimeoutSeconds)
                     {
-                        await Task.Delay(updateIntervalMs, linkedCts.Token).ConfigureAwait(false);
+                        await Task.Delay(ProgressUpdateIntervalMs, linkedCts.Token).ConfigureAwait(false);
                         
                         if (linkedCts.Token.IsCancellationRequested)
                             break;
 
                         // Calcula o progresso estimado desta verificação (0 a 0.99)
-                        double individualProgress = Math.Min(stopwatch.Elapsed.TotalSeconds / timeoutSeconds, 0.99);
+                        double individualProgress = Math.Min(stopwatch.Elapsed.TotalSeconds / ConnectionTimeoutSeconds, 0.99);
                         
                         // Notifica com o progresso intermediário - garantindo que nunca volta
                         lock (progressLock)
@@ -328,7 +329,7 @@ namespace TnsNamesEditor.Services
                 var errorTask = process.StandardError.ReadToEndAsync();
 
                 using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(token);
-                timeoutCts.CancelAfter(TimeSpan.FromSeconds(5));
+                timeoutCts.CancelAfter(TimeSpan.FromSeconds(ConnectionTimeoutSeconds));
 
                 try
                 {
