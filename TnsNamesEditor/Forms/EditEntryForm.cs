@@ -267,8 +267,8 @@ namespace TnsNamesEditor.Forms
             entry.Host = txtHost.Text.Trim();
             entry.Port = txtPort.Text.Trim();
             entry.ServiceName = txtServiceName.Text.Trim();
-            entry.Sid = txtSid.Text.Trim();
-            entry.Server = txtServer.Text.Trim();
+            entry.Sid = string.IsNullOrWhiteSpace(txtSid.Text) ? string.Empty : txtSid.Text.Trim();
+            entry.Server = string.IsNullOrWhiteSpace(txtServer.Text) ? string.Empty : txtServer.Text.Trim();
             entry.Protocol = cmbProtocol.SelectedItem?.ToString() ?? string.Empty;
 
             DialogResult = DialogResult.OK;
@@ -284,8 +284,8 @@ namespace TnsNamesEditor.Forms
                 Host = txtHost.Text.Trim(),
                 Port = txtPort.Text.Trim(),
                 ServiceName = txtServiceName.Text.Trim(),
-                Sid = txtSid.Text.Trim(),
-                Server = txtServer.Text.Trim(),
+                Sid = string.IsNullOrWhiteSpace(txtSid.Text) ? string.Empty : txtSid.Text.Trim(),
+                Server = string.IsNullOrWhiteSpace(txtServer.Text) ? string.Empty : txtServer.Text.Trim(),
                 Protocol = cmbProtocol.SelectedItem?.ToString() ?? string.Empty
             };
 

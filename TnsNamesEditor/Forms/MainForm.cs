@@ -212,23 +212,25 @@ namespace TnsNamesEditor.Forms
         private void RefreshGrid()
         {
             dataGridView1.DataSource = null;
+            dataGridView1.Rows.Clear();
+            dataGridView1.Refresh();
             
             // Se filteredEntries tiver itens, mostra a lista filtrada
             // Se estiver vazia mas o texto de pesquisa não estiver vazio, mostra vazio
             // Se não houver pesquisa ativa, mostra todos os entries
             if (filteredEntries.Any())
             {
-                dataGridView1.DataSource = filteredEntries;
+                dataGridView1.DataSource = new BindingList<TnsEntry>(filteredEntries);
             }
             else if (!string.IsNullOrEmpty(txtSearch.Text.Trim()))
             {
                 // Pesquisa ativa mas sem resultados - mostra lista vazia
-                dataGridView1.DataSource = new List<TnsEntry>();
+                dataGridView1.DataSource = new BindingList<TnsEntry>();
             }
             else
             {
                 // Sem pesquisa - mostra todos
-                dataGridView1.DataSource = entries;
+                dataGridView1.DataSource = new BindingList<TnsEntry>(entries);
             }
             
             // Oculta colunas desnecessárias
@@ -576,8 +578,9 @@ namespace TnsNamesEditor.Forms
                     // Salva as alterações
                     SaveChanges($"Entrada '{editedEntry.Name}' atualizada e salva");
                     
-                    // Recarrega o arquivo para garantir sincronia
-                    LoadFile(currentFilePath);
+                    // Atualiza a grade sem recarregar do arquivo
+                    RebindGridAfterDataChange();
+                    StartConnectionStatusRefresh(new[] { editedEntry }, forceRefresh: true);
                     UpdateStatus($"Entrada '{editedEntry.Name}' atualizada com sucesso");
                 }
             }
@@ -1184,7 +1187,7 @@ namespace TnsNamesEditor.Forms
                 return;
             }
 
-            int maxDegreeOfParallelism = Math.Max(1, Environment.ProcessorCount);
+            int maxDegreeOfParallelism = 3;
 
             using var semaphore = new SemaphoreSlim(maxDegreeOfParallelism, maxDegreeOfParallelism);
             var tasks = new List<Task>();

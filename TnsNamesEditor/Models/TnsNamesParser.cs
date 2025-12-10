@@ -35,7 +35,7 @@ namespace TnsNamesEditor.Models
             sb.AppendLine($"{Name} =");
             sb.AppendLine("  (DESCRIPTION =");
             
-            if (!string.IsNullOrEmpty(Server))
+            if (!string.IsNullOrWhiteSpace(Server))
             {
                 // Formato sem ADDRESS_LIST quando tem SERVER
                 sb.AppendLine($"    (ADDRESS = (PROTOCOL = {Protocol})(HOST = {Host})(PORT = {Port}))");
@@ -50,17 +50,17 @@ namespace TnsNamesEditor.Models
             
             sb.AppendLine("    (CONNECT_DATA =");
             
-            if (!string.IsNullOrEmpty(Server))
+            if (!string.IsNullOrWhiteSpace(Server))
             {
                 sb.AppendLine($"      (SERVER = {Server})");
             }
             
-            if (!string.IsNullOrEmpty(ServiceName))
+            if (!string.IsNullOrWhiteSpace(ServiceName))
             {
                 sb.AppendLine($"      (SERVICE_NAME = {ServiceName})");
             }
             
-            if (!string.IsNullOrEmpty(Sid))
+            if (!string.IsNullOrWhiteSpace(Sid))
             {
                 sb.AppendLine($"      (SID = {Sid})");
             }
@@ -106,29 +106,29 @@ namespace TnsNamesEditor.Models
             content = string.Join("\n", cleanedLines);
             
             // Padrão melhorado: captura nome e depois todo o bloco DESCRIPTION com balanceamento de parênteses
-            var entryPattern = @"^([A-Z0-9_]+)\s*=\s*\(DESCRIPTION\s*=";
+            var entryPattern = @"^([A-Z0-9_]+)\s*=";
             var matches = Regex.Matches(content, entryPattern, 
                 RegexOptions.Multiline | RegexOptions.IgnoreCase);
 
-            foreach (Match match in matches)
+            for (int i = 0; i < matches.Count; i++)
             {
-                // Encontra o início da entrada
+                Match match = matches[i];
                 int startIndex = match.Index;
-                int pos = match.Index + match.Length;
-                int parenCount = 2; // Já temos ( de DESCRIPTION e ( inicial
+                int endIndex;
                 
-                // Conta parênteses para encontrar o fim da entrada
-                while (pos < content.Length && parenCount > 0)
+                // Se houver próxima entrada, termina antes dela
+                if (i < matches.Count - 1)
                 {
-                    if (content[pos] == '(')
-                        parenCount++;
-                    else if (content[pos] == ')')
-                        parenCount--;
-                    pos++;
+                    endIndex = matches[i + 1].Index;
+                }
+                else
+                {
+                    // Última entrada, vai até o final
+                    endIndex = content.Length;
                 }
                 
                 // Extrai o conteúdo completo da entrada
-                string entryText = content.Substring(startIndex, pos - startIndex);
+                string entryText = content.Substring(startIndex, endIndex - startIndex).Trim();
                 
                 var entry = new TnsEntry
                 {
@@ -150,7 +150,7 @@ namespace TnsNamesEditor.Models
                 entry.Sid = ExtractValue(entryText, "SID");
                 entry.Server = ExtractValue(entryText, "SERVER");
                 
-                // Define valores padrão se estiverem vazios
+                entries.Add(entry);
                 entries.Add(entry);
             }
 
