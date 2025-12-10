@@ -188,8 +188,14 @@ namespace TnsNamesEditor.Forms
             UpdateSelectionDependentActions();
         }
 
-        private void MainForm_Load(object sender, EventArgs e)
+        private async void MainForm_Load(object sender, EventArgs e)
         {
+            // Força a atualização visual completa do formulário primeiro
+            Application.DoEvents();
+            
+            // Pequeno delay para garantir que tudo foi renderizado
+            await Task.Delay(50);
+            
             if (TryLoadDefaultFileFromKnownLocations())
             {
                 return;
@@ -205,7 +211,7 @@ namespace TnsNamesEditor.Forms
             }
         }
 
-        private void LoadFile(string filePath, string? statusOverride = null)
+        private async void LoadFile(string filePath, string? statusOverride = null)
         {
             try
             {
@@ -234,6 +240,11 @@ namespace TnsNamesEditor.Forms
                 }
 
                 connectionStatusService.InitializeConnectionStatus(entries);
+                
+                // Força atualização visual antes de iniciar os testes
+                Application.DoEvents();
+                await Task.Delay(10);
+                
                 _ = connectionStatusService.StartConnectionStatusRefreshAsync(entries, forceRefresh: statusOverride == null);
             }
             catch (Exception ex)
