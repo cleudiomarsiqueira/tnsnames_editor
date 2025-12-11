@@ -84,6 +84,7 @@ namespace TnsNamesEditor.Forms
             radioTodos.CheckedChanged += StatusFilter_CheckedChanged;
             radioOnline.CheckedChanged += StatusFilter_CheckedChanged;
             radioOffline.CheckedChanged += StatusFilter_CheckedChanged;
+            radioDuplicadas.CheckedChanged += StatusFilter_CheckedChanged;
             LoadIcon();
             UpdateFilePathLabel(string.Empty);
             UpdateAvailableActions();
@@ -243,11 +244,7 @@ namespace TnsNamesEditor.Forms
 
                 connectionStatusService.InitializeConnectionStatus(entries);
                 
-                // Força atualização visual antes de iniciar os testes
-                Application.DoEvents();
-                await Task.Delay(10);
-                
-                _ = connectionStatusService.StartConnectionStatusRefreshAsync(entries, forceRefresh: statusOverride == null);
+                // Não executa o teste automaticamente - aguarda ação do usuário
             }
             catch (Exception ex)
             {
@@ -725,6 +722,71 @@ namespace TnsNamesEditor.Forms
             SaveChanges(statusMessage);
         }
 
+        private void btnDeleteDuplicates_Click(object sender, EventArgs e)
+        {
+            if (entries.Count == 0)
+            {
+                UpdateStatus("Não há entradas para verificar");
+                return;
+            }
+
+            // Encontra entradas duplicadas (mantém a primeira ocorrência de cada nome)
+            var duplicateGroups = entries
+                .GroupBy(e => e.Name, StringComparer.OrdinalIgnoreCase)
+                .Where(g => g.Count() > 1)
+                .ToList();
+
+            if (!duplicateGroups.Any())
+            {
+                UpdateStatus("Nenhuma entrada duplicada encontrada");
+                MessageBox.Show(
+                    "Não foram encontradas entradas duplicadas no arquivo.",
+                    "Sem Duplicadas",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
+                return;
+            }
+
+            // Conta quantas entradas serão removidas
+            int totalDuplicates = duplicateGroups.Sum(g => g.Count() - 1);
+            var duplicateNames = string.Join(", ", duplicateGroups.Select(g => $"{g.Key} ({g.Count()}x)"));
+
+            string confirmMessage = $"Foram encontradas {duplicateGroups.Count} entradas com duplicatas:\n\n" +
+                $"{duplicateNames}\n\n" +
+                $"Total de {totalDuplicates} duplicata(s) será(ão) removida(s), mantendo apenas a primeira ocorrência de cada nome.\n\n" +
+                $"Deseja continuar?";
+
+            if (!ShowConfirmation(confirmMessage, "Confirmar Exclusão de Duplicadas"))
+            {
+                return;
+            }
+
+            // Remove as duplicatas (mantém apenas a primeira ocorrência)
+            var entriesToRemove = new List<TnsEntry>();
+            foreach (var group in duplicateGroups)
+            {
+                // Pula a primeira ocorrência, remove as demais
+                entriesToRemove.AddRange(group.Skip(1));
+            }
+
+            foreach (var entry in entriesToRemove)
+            {
+                entries.Remove(entry);
+                connectionStatusService.ClearCache(entry.Name);
+                
+                // Se houver filtro ativo, remove também da lista filtrada
+                if (filteredEntries.Any())
+                {
+                    filteredEntries.Remove(entry);
+                }
+            }
+            
+            RebindGridAfterDataChange();
+            
+            string statusMessage = $"{totalDuplicates} entrada(s) duplicada(s) excluída(s) e salva(s)";
+            SaveChanges(statusMessage);
+        }
+
         private void btnRefresh_Click(object sender, EventArgs e)
         {
             if (!btnRefresh.Enabled)
@@ -738,9 +800,9 @@ namespace TnsNamesEditor.Forms
             }
         }
 
-        private void btnCheckAll_Click(object sender, EventArgs e)
+        private async void btnCheckAll_Click(object sender, EventArgs e)
         {
-            if (!btnCheckAll.Enabled)
+            if (!btnCheckAll.Enabled || connectionStatusService.IsCheckingStatus)
             {
                 return;
             }
@@ -751,18 +813,28 @@ namespace TnsNamesEditor.Forms
                 return;
             }
 
-            foreach (var entry in entries)
+            btnCheckAll.Enabled = false;
+            
+            try
             {
-                if (string.IsNullOrWhiteSpace(entry.Name))
+                foreach (var entry in entries)
                 {
-                    continue;
+                    if (string.IsNullOrWhiteSpace(entry.Name))
+                    {
+                        continue;
+                    }
+
+                    connectionStatusService.MarkEntryForStatusRefresh(entry.Name);
                 }
 
-                connectionStatusService.MarkEntryForStatusRefresh(entry.Name);
+                UpdateStatus("Testando todas as entradas...");
+                await connectionStatusService.StartConnectionStatusRefreshAsync(entries, forceRefresh: true);
+                UpdateStatus($"Teste concluído: {entries.Count} entrada(s) verificada(s)");
             }
-
-            UpdateStatus("Testando novamente todas as entradas...");
-            _ = connectionStatusService.StartConnectionStatusRefreshAsync(entries, forceRefresh: true);
+            finally
+            {
+                btnCheckAll.Enabled = true;
+            }
         }
 
         private void dataGridView1_CellDoubleClick(object sender, DataGridViewCellEventArgs e)
@@ -819,6 +891,13 @@ namespace TnsNamesEditor.Forms
                     if (btnCheckAll.Enabled)
                     {
                         btnCheckAll_Click(sender, e);
+                        e.Handled = true;
+                    }
+                    break;
+                case Keys.F7:
+                    if (btnDeleteDuplicates.Enabled)
+                    {
+                        btnDeleteDuplicates_Click(sender, e);
                         e.Handled = true;
                     }
                     break;
@@ -947,6 +1026,17 @@ namespace TnsNamesEditor.Forms
             else if (currentStatusFilter == "Offline")
             {
                 return source.Where(e => e.ConnectionStatus == "Offline").ToList();
+            }
+            else if (currentStatusFilter == "Duplicadas")
+            {
+                // Encontra entradas duplicadas (mesmo nome)
+                var duplicateNames = source
+                    .GroupBy(e => e.Name, StringComparer.OrdinalIgnoreCase)
+                    .Where(g => g.Count() > 1)
+                    .Select(g => g.Key)
+                    .ToHashSet(StringComparer.OrdinalIgnoreCase);
+                
+                return source.Where(e => duplicateNames.Contains(e.Name)).ToList();
             }
             else
             {

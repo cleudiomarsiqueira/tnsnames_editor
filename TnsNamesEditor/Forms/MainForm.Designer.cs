@@ -38,6 +38,7 @@ namespace TnsNamesEditor.Forms
             toolStripSeparator1 = new ToolStripSeparator();
             btnAdd = new ToolStripButton();
             btnDelete = new ToolStripButton();
+            btnDeleteDuplicates = new ToolStripButton();
             btnRefresh = new ToolStripButton();
             btnCheckAll = new ToolStripButton();
             btnEdit = new ToolStripButton();
@@ -49,6 +50,7 @@ namespace TnsNamesEditor.Forms
             radioTodos = new RadioButton();
             radioOnline = new RadioButton();
             radioOffline = new RadioButton();
+            radioDuplicadas = new RadioButton();
             statusStrip1 = new StatusStrip();
             lblStatus = new ToolStripStatusLabel();
             lblFilePath = new ToolStripStatusLabel();
@@ -96,7 +98,7 @@ namespace TnsNamesEditor.Forms
             toolStrip1.AutoSize = false;
             toolStrip1.GripStyle = ToolStripGripStyle.Hidden;
             toolStrip1.ImageScalingSize = new Size(32, 32);
-            toolStrip1.Items.AddRange(new ToolStripItem[] { btnOpen, toolStripSeparator1, btnAdd, btnDelete, btnRefresh, btnCheckAll });
+            toolStrip1.Items.AddRange(new ToolStripItem[] { btnOpen, toolStripSeparator1, btnAdd, btnDelete, btnDeleteDuplicates, btnRefresh, btnCheckAll });
             toolStrip1.Location = new Point(0, 0);
             toolStrip1.Name = "toolStrip1";
             toolStrip1.Padding = new Padding(5);
@@ -139,6 +141,17 @@ namespace TnsNamesEditor.Forms
             btnDelete.Text = "Excluir (Del)";
             btnDelete.Click += btnDelete_Click;
             // 
+            // btnDeleteDuplicates
+            // 
+            btnDeleteDuplicates.AutoSize = false;
+            btnDeleteDuplicates.DisplayStyle = ToolStripItemDisplayStyle.Text;
+            btnDeleteDuplicates.Font = new Font("Segoe UI", 10F);
+            btnDeleteDuplicates.Name = "btnDeleteDuplicates";
+            btnDeleteDuplicates.Size = new Size(180, 35);
+            btnDeleteDuplicates.Text = "Excluir Duplicadas (F7)";
+            btnDeleteDuplicates.ToolTipText = "Exclui todas as entradas duplicadas mantendo apenas a primeira ocorrência (F7)";
+            btnDeleteDuplicates.Click += btnDeleteDuplicates_Click;
+            // 
             // btnRefresh
             // 
             btnRefresh.Alignment = ToolStripItemAlignment.Right;
@@ -158,8 +171,8 @@ namespace TnsNamesEditor.Forms
             btnCheckAll.Font = new Font("Segoe UI", 10F);
             btnCheckAll.Name = "btnCheckAll";
             btnCheckAll.Size = new Size(190, 35);
-            btnCheckAll.Text = "Testar novamente (F6)";
-            btnCheckAll.ToolTipText = "Executa novamente o tnsping para todas as entradas (F6)";
+            btnCheckAll.Text = "Testar com tnsping (F6)";
+            btnCheckAll.ToolTipText = "Executa o tnsping para todas as entradas (F6)";
             btnCheckAll.Click += btnCheckAll_Click;
             // 
             // btnEdit
@@ -174,19 +187,19 @@ namespace TnsNamesEditor.Forms
             // 
             progressBarPanel.BackColor = SystemColors.Control;
             progressBarPanel.Controls.Add(progressBar);
-            progressBarPanel.Dock = DockStyle.Top;
-            progressBarPanel.Location = new Point(0, 50);
+            progressBarPanel.Dock = DockStyle.Bottom;
+            progressBarPanel.Location = new Point(0, 495);
             progressBarPanel.Margin = new Padding(0);
             progressBarPanel.Name = "progressBarPanel";
-            progressBarPanel.Padding = new Padding(9, 0, 9, 2);
-            progressBarPanel.Size = new Size(1050, 8);
+            progressBarPanel.Padding = new Padding(9, 0, 9, 0);
+            progressBarPanel.Size = new Size(1050, 6);
             progressBarPanel.TabIndex = 10;
             progressBarPanel.Visible = false;
             // 
             // progressBar
             // 
             progressBar.Dock = DockStyle.Fill;
-            progressBar.Location = new Point(9, 0);
+            progressBar.Location = new Point(9, 2);
             progressBar.Margin = new Padding(0);
             progressBar.Name = "progressBar";
             progressBar.Size = new Size(1032, 6);
@@ -223,6 +236,7 @@ namespace TnsNamesEditor.Forms
             filterPanel.Controls.Add(radioTodos);
             filterPanel.Controls.Add(radioOnline);
             filterPanel.Controls.Add(radioOffline);
+            filterPanel.Controls.Add(radioDuplicadas);
             filterPanel.Dock = DockStyle.Top;
             filterPanel.Location = new Point(0, 92);
             filterPanel.Name = "filterPanel";
@@ -261,6 +275,16 @@ namespace TnsNamesEditor.Forms
             radioOffline.TabIndex = 2;
             radioOffline.Text = "Offline";
             radioOffline.UseVisualStyleBackColor = true;
+            // 
+            // radioDuplicadas
+            // 
+            radioDuplicadas.AutoSize = true;
+            radioDuplicadas.Location = new Point(235, 6);
+            radioDuplicadas.Name = "radioDuplicadas";
+            radioDuplicadas.Size = new Size(86, 19);
+            radioDuplicadas.TabIndex = 3;
+            radioDuplicadas.Text = "Duplicadas";
+            radioDuplicadas.UseVisualStyleBackColor = true;
             // 
             // statusStrip1
             // 
@@ -355,6 +379,7 @@ namespace TnsNamesEditor.Forms
         private ToolStripButton btnAdd;
         private ToolStripButton btnEdit;
         private ToolStripButton btnDelete;
+        private ToolStripButton btnDeleteDuplicates;
         private ToolStripButton btnRefresh;
         private ToolStripButton btnCheckAll;
         private Panel progressBarPanel;
@@ -365,6 +390,7 @@ namespace TnsNamesEditor.Forms
         private RadioButton radioTodos;
         private RadioButton radioOnline;
         private RadioButton radioOffline;
+        private RadioButton radioDuplicadas;
         private StatusStrip statusStrip1;
         private ToolStripStatusLabel lblStatus;
         private DataGridView dataGridView1;

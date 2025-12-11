@@ -16,6 +16,8 @@ namespace TnsNamesEditor.Services
         private readonly Action? onStatusUpdated;
         private readonly Action<int, int>? onProgressChanged;
         private readonly Action<double>? onIndividualProgressChanged;
+        
+        public bool IsCheckingStatus { get; private set; }
 
         public ConnectionStatusService(
             int maxParallelChecks = 5, 
@@ -45,7 +47,7 @@ namespace TnsNamesEditor.Services
                 }
                 else
                 {
-                    entry.ConnectionStatus = string.Empty;
+                    entry.ConnectionStatus = "Testar...";
                 }
             }
         }
@@ -87,6 +89,8 @@ namespace TnsNamesEditor.Services
                 return;
             }
 
+            IsCheckingStatus = true;
+            
             // Notifica início do progresso
             onProgressChanged?.Invoke(0, entriesToCheck.Count);
 
@@ -101,7 +105,15 @@ namespace TnsNamesEditor.Services
             cancellationTokenSource = new CancellationTokenSource();
             var token = cancellationTokenSource.Token;
 
-            await Task.Run(() => UpdateConnectionStatusesAsync(entriesToCheck, token, onEntryStatusChanged, entriesToCheck.Count), token);
+            try
+            {
+                await Task.Run(() => UpdateConnectionStatusesAsync(entriesToCheck, token, onEntryStatusChanged, entriesToCheck.Count), token);
+            }
+            finally
+            {
+                IsCheckingStatus = false;
+                onStatusUpdated?.Invoke();
+            }
         }
 
         public void CancelPendingChecks()
