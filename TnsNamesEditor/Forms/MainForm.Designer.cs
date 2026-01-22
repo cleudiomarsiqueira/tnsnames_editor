@@ -108,11 +108,9 @@ namespace TnsNamesEditor.Forms
             // 
             // btnOpen
             // 
-            btnOpen.AutoSize = false;
             btnOpen.DisplayStyle = ToolStripItemDisplayStyle.Text;
             btnOpen.Font = new Font("Segoe UI", 10F);
             btnOpen.Name = "btnOpen";
-            btnOpen.Size = new Size(90, 35);
             btnOpen.Text = "Abrir (F2)";
             btnOpen.Click += btnOpen_Click;
             // 
@@ -123,31 +121,25 @@ namespace TnsNamesEditor.Forms
             // 
             // btnAdd
             // 
-            btnAdd.AutoSize = false;
             btnAdd.DisplayStyle = ToolStripItemDisplayStyle.Text;
             btnAdd.Font = new Font("Segoe UI", 10F);
             btnAdd.Name = "btnAdd";
-            btnAdd.Size = new Size(120, 35);
             btnAdd.Text = "Adicionar (F4)";
             btnAdd.Click += btnAdd_Click;
             // 
             // btnDelete
             // 
-            btnDelete.AutoSize = false;
             btnDelete.DisplayStyle = ToolStripItemDisplayStyle.Text;
             btnDelete.Font = new Font("Segoe UI", 10F);
             btnDelete.Name = "btnDelete";
-            btnDelete.Size = new Size(110, 35);
             btnDelete.Text = "Excluir (Del)";
             btnDelete.Click += btnDelete_Click;
             // 
             // btnDeleteDuplicates
             // 
-            btnDeleteDuplicates.AutoSize = false;
             btnDeleteDuplicates.DisplayStyle = ToolStripItemDisplayStyle.Text;
             btnDeleteDuplicates.Font = new Font("Segoe UI", 10F);
             btnDeleteDuplicates.Name = "btnDeleteDuplicates";
-            btnDeleteDuplicates.Size = new Size(180, 35);
             btnDeleteDuplicates.Text = "Excluir Duplicadas (F7)";
             btnDeleteDuplicates.ToolTipText = "Exclui todas as entradas duplicadas mantendo apenas a primeira ocorrência (F7)";
             btnDeleteDuplicates.Click += btnDeleteDuplicates_Click;
@@ -155,22 +147,18 @@ namespace TnsNamesEditor.Forms
             // btnRefresh
             // 
             btnRefresh.Alignment = ToolStripItemAlignment.Right;
-            btnRefresh.AutoSize = false;
             btnRefresh.DisplayStyle = ToolStripItemDisplayStyle.Text;
             btnRefresh.Font = new Font("Segoe UI", 10F);
             btnRefresh.Name = "btnRefresh";
-            btnRefresh.Size = new Size(120, 35);
             btnRefresh.Text = "Atualizar (F5)";
             btnRefresh.Click += btnRefresh_Click;
             // 
             // btnCheckAll
             // 
             btnCheckAll.Alignment = ToolStripItemAlignment.Right;
-            btnCheckAll.AutoSize = false;
             btnCheckAll.DisplayStyle = ToolStripItemDisplayStyle.Text;
             btnCheckAll.Font = new Font("Segoe UI", 10F);
             btnCheckAll.Name = "btnCheckAll";
-            btnCheckAll.Size = new Size(190, 35);
             btnCheckAll.Text = "Testar com tnsping (F6)";
             btnCheckAll.ToolTipText = "Executa o tnsping para todas as entradas (F6)";
             btnCheckAll.Click += btnCheckAll_Click;
