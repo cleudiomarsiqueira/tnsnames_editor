@@ -106,7 +106,7 @@ namespace TnsNamesEditor.Models
             content = string.Join("\n", cleanedLines);
             
             // Padrão melhorado: captura nome e depois todo o bloco DESCRIPTION com balanceamento de parênteses
-            var entryPattern = @"^([A-Z0-9_]+)\s*=";
+            var entryPattern = @"^([A-Z0-9_\-\.]+)\s*=";
             var matches = Regex.Matches(content, entryPattern, 
                 RegexOptions.Multiline | RegexOptions.IgnoreCase);
 
@@ -136,7 +136,7 @@ namespace TnsNamesEditor.Models
                 };
 
                 // Extrai o nome da entrada
-                var nameMatch = Regex.Match(entryText, @"^([A-Z0-9_]+)\s*=", RegexOptions.IgnoreCase);
+                var nameMatch = Regex.Match(entryText, @"^([A-Z0-9_\-\.]+)\s*=", RegexOptions.IgnoreCase);
                 if (nameMatch.Success)
                 {
                     entry.Name = nameMatch.Groups[1].Value.Trim();

@@ -272,20 +272,20 @@ namespace TnsNamesEditor.Forms
             dataGridView1.Refresh();
             
             // Se filteredEntries tiver itens, mostra a lista filtrada
-            // Se estiver vazia mas o texto de pesquisa não estiver vazio, mostra vazio
-            // Se não houver pesquisa ativa, mostra todos os entries
+            // Se estiver vazia e houver um filtro ativo (pesquisa ou status), mostra vazio
+            // Se não houver nenhum filtro ativo, mostra todos os entries
             if (filteredEntries.Any())
             {
                 dataGridView1.DataSource = new BindingList<TnsEntry>(filteredEntries);
             }
-            else if (!string.IsNullOrEmpty(txtSearch.Text.Trim()))
+            else if (!string.IsNullOrEmpty(txtSearch.Text.Trim()) || currentStatusFilter != "Todos")
             {
-                // Pesquisa ativa mas sem resultados - mostra lista vazia
+                // Há um filtro ativo (pesquisa ou status diferente de "Todos") mas nenhum resultado - mostra lista vazia
                 dataGridView1.DataSource = new BindingList<TnsEntry>();
             }
             else
             {
-                // Sem pesquisa - mostra todos
+                // Sem nenhum filtro ativo - mostra todos
                 dataGridView1.DataSource = new BindingList<TnsEntry>(entries);
             }
             
@@ -731,9 +731,20 @@ namespace TnsNamesEditor.Forms
             }
 
             // Encontra entradas duplicadas (mantém a primeira ocorrência de cada nome)
-            var duplicateGroups = entries
-                .GroupBy(e => e.Name, StringComparer.OrdinalIgnoreCase)
-                .Where(g => g.Count() > 1)
+            var normalizedGroups = new Dictionary<string, List<TnsEntry>>(StringComparer.OrdinalIgnoreCase);
+            
+            foreach (var entry in entries)
+            {
+                string normalizedName = entry.Name?.Trim() ?? "";
+                if (!normalizedGroups.ContainsKey(normalizedName))
+                {
+                    normalizedGroups[normalizedName] = new List<TnsEntry>();
+                }
+                normalizedGroups[normalizedName].Add(entry);
+            }
+            
+            var duplicateGroups = normalizedGroups
+                .Where(kvp => kvp.Value.Count > 1 && !string.IsNullOrEmpty(kvp.Key))
                 .ToList();
 
             if (!duplicateGroups.Any())
@@ -748,8 +759,8 @@ namespace TnsNamesEditor.Forms
             }
 
             // Conta quantas entradas serão removidas
-            int totalDuplicates = duplicateGroups.Sum(g => g.Count() - 1);
-            var duplicateNames = string.Join(", ", duplicateGroups.Select(g => $"{g.Key} ({g.Count()}x)"));
+            int totalDuplicates = duplicateGroups.Sum(g => g.Value.Count - 1);
+            var duplicateNames = string.Join(", ", duplicateGroups.Select(g => $"{g.Key} ({g.Value.Count}x)"));
 
             string confirmMessage = $"Foram encontradas {duplicateGroups.Count} entradas com duplicatas:\n\n" +
                 $"{duplicateNames}\n\n" +
@@ -766,7 +777,7 @@ namespace TnsNamesEditor.Forms
             foreach (var group in duplicateGroups)
             {
                 // Pula a primeira ocorrência, remove as demais
-                entriesToRemove.AddRange(group.Skip(1));
+                entriesToRemove.AddRange(group.Value.Skip(1));
             }
 
             foreach (var entry in entriesToRemove)
@@ -940,7 +951,7 @@ namespace TnsNamesEditor.Forms
             }
             else
             {
-                filteredEntries.Clear();
+                filteredEntries = ApplyStatusFilterToList(entries);
                 RefreshGrid();
             }
 
@@ -1029,14 +1040,30 @@ namespace TnsNamesEditor.Forms
             }
             else if (currentStatusFilter == "Duplicadas")
             {
-                // Encontra entradas duplicadas (mesmo nome)
-                var duplicateNames = source
-                    .GroupBy(e => e.Name, StringComparer.OrdinalIgnoreCase)
-                    .Where(g => g.Count() > 1)
-                    .Select(g => g.Key)
-                    .ToHashSet(StringComparer.OrdinalIgnoreCase);
+                // Encontra entradas duplicadas (mesmo nome) - normaliza para evitar problemas
+                var normalizedNames = new Dictionary<string, List<TnsEntry>>(StringComparer.OrdinalIgnoreCase);
                 
-                return source.Where(e => duplicateNames.Contains(e.Name)).ToList();
+                foreach (var entry in source)
+                {
+                    string normalizedName = entry.Name?.Trim() ?? "";
+                    if (!normalizedNames.ContainsKey(normalizedName))
+                    {
+                        normalizedNames[normalizedName] = new List<TnsEntry>();
+                    }
+                    normalizedNames[normalizedName].Add(entry);
+                }
+                
+                // Pega apenas os grupos com mais de uma entrada
+                var duplicates = new List<TnsEntry>();
+                foreach (var kvp in normalizedNames)
+                {
+                    if (kvp.Value.Count > 1 && !string.IsNullOrEmpty(kvp.Key))
+                    {
+                        duplicates.AddRange(kvp.Value);
+                    }
+                }
+                
+                return duplicates;
             }
             else
             {
