@@ -1309,10 +1309,49 @@ namespace TnsNamesEditor.Forms
                 return;
             }
 
-            var selectedEntry = (TnsEntry)dataGridView1.SelectedRows[0].DataBoundItem;
-            var formattedText = selectedEntry.ToTnsFormat();
-            Clipboard.SetText(formattedText);
-            UpdateStatus($"Entrada '{selectedEntry.Name}' copiada para a área de transferência");
+            try
+            {
+                var selectedEntry = dataGridView1.SelectedRows[0].DataBoundItem as TnsEntry;
+                if (selectedEntry == null)
+                {
+                    UpdateStatus("Erro: não foi possível obter a entrada selecionada");
+                    return;
+                }
+
+                if (string.IsNullOrWhiteSpace(selectedEntry.Name))
+                {
+                    UpdateStatus("Erro: a entrada não possui um nome válido");
+                    return;
+                }
+
+                var formattedText = selectedEntry.ToTnsFormat();
+                if (string.IsNullOrWhiteSpace(formattedText))
+                {
+                    UpdateStatus("Erro: não foi possível formatar a entrada");
+                    return;
+                }
+
+                Clipboard.SetText(formattedText);
+                UpdateStatus($"Entrada '{selectedEntry.Name}' copiada para a área de transferência");
+            }
+            catch (System.Runtime.InteropServices.ExternalException ex)
+            {
+                UpdateStatus("Erro ao copiar: A área de transferência está inacessível. Tente novamente.");
+                MessageBox.Show(
+                    "Não foi possível copiar para a área de transferência.\n\nErro: " + ex.Message,
+                    "Erro ao Copiar",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+            }
+            catch (Exception ex)
+            {
+                UpdateStatus("Erro ao copiar a entrada");
+                MessageBox.Show(
+                    "Ocorreu um erro inesperado ao copiar a entrada:\n\n" + ex.Message,
+                    "Erro",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+            }
         }
 
         protected override void OnFormClosing(FormClosingEventArgs e)
